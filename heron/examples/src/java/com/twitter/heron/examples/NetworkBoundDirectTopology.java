@@ -20,6 +20,7 @@ import com.twitter.heron.api.Config;
 import com.twitter.heron.api.HeronSubmitter;
 import com.twitter.heron.api.bolt.BaseRichBolt;
 import com.twitter.heron.api.bolt.OutputCollector;
+import com.twitter.heron.api.grouping.CustomStreamGrouping;
 import com.twitter.heron.api.spout.BaseRichSpout;
 import com.twitter.heron.api.spout.SpoutOutputCollector;
 import com.twitter.heron.api.topology.OutputFieldsDeclarer;
@@ -28,7 +29,8 @@ import com.twitter.heron.api.topology.TopologyContext;
 import com.twitter.heron.api.tuple.Fields;
 import com.twitter.heron.api.tuple.Tuple;
 import com.twitter.heron.api.tuple.Values;
-import com.twitter.heron.grouping.DirectMappingGrouping;
+import com.twitter.heron.grouping.LocalAffinityGrouping;
+import com.twitter.heron.grouping.RemoteAffinityGrouping;
 
 import backtype.storm.metric.api.GlobalMetrics;
 
@@ -42,19 +44,22 @@ public final class NetworkBoundDirectTopology {
 
     int noSpouts = Integer.parseInt(args[1]);
     int noBolts = Integer.parseInt(args[2]);
+    int localAffinity = Integer.parseInt(args[3]);
+
+    CustomStreamGrouping grouping = new RemoteAffinityGrouping();
+    if (localAffinity == 1) {
+      grouping = new LocalAffinityGrouping();
+    }
+    System.out.println("Grouping used: " + grouping.getClass().getName());
     builder.setSpout("word", new NetworkBoundTopology.NetworkSpout(), noSpouts);
     builder.setBolt("exclaim1", new NetworkBoundTopology.NetworkBolt(), noBolts).
-        customGrouping("word", new DirectMappingGrouping());
+        customGrouping("word", grouping);
 
     Config conf = new Config();
     conf.setDebug(true);
     conf.setMaxSpoutPending(10);
     conf.put(Config.TOPOLOGY_WORKER_CHILDOPTS, "-XX:+HeapDumpOnOutOfMemoryError");
     conf.setEnableAcking(true);
-    //conf.setComponentRam("word", 512L * 1024 * 1024);
-    //conf.setComponentRam("exclaim1", 512L * 1024 * 1024);
-    //conf.setContainerDiskRequested(1024L * 1024 * 1024);
-    //conf.setContainerCpuRequested(1);
 
     if (args != null && args.length > 0) {
       if ((noSpouts + noBolts) / 4 < 1) {
