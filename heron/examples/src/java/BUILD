@@ -5,6 +5,7 @@ java_binary(
     srcs = glob(["**/*.java"]),
     deps = [
         "//heron/storm/src/java:storm-compatibility-java",
+        "//heron/api/src/java:api-java",
     ],
     create_executable = 0,
 )
