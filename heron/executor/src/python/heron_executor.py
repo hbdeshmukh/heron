@@ -376,6 +376,13 @@ class HeronExecutor(object):
     retval = {}
     instance_plans = self._get_instance_plans(self.packing_plan, self.shard)
     instance_info = []
+
+    global_task_id_file = open("global_task_id_file", 'w')
+    for instance_plan in instance_plans:
+        global_task_id_file.write(str(instance_plan.task_id) + "\n")
+    global_task_id_file.flush()
+    global_task_id_file.close()
+
     for instance_plan in instance_plans:
       global_task_id = instance_plan.task_id
       component_index = instance_plan.component_index
