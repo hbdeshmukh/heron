@@ -14,15 +14,24 @@
 
 package com.twitter.heron.examples;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 import backtype.storm.Config;
 import backtype.storm.StormSubmitter;
+import backtype.storm.generated.GlobalStreamId;
+import backtype.storm.grouping.CustomStreamGrouping;
 import backtype.storm.metric.api.GlobalMetrics;
 import backtype.storm.spout.SpoutOutputCollector;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
+import backtype.storm.task.WorkerTopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.topology.base.BaseRichBolt;
@@ -37,6 +46,58 @@ import backtype.storm.utils.Utils;
  */
 public final class AckingTopology {
 
+  public static class LocalAffinityDirectGrouping implements CustomStreamGrouping {
+    private static final long serialVersionUID = 1913733461146490337L;
+
+    private List<Integer> localTargetTasksIds = new ArrayList<>();
+    private List<Integer> remoteTargetTaskIds = new ArrayList<>();
+    private int roundRobinIndex = 0;
+
+    @Override
+    public void prepare(WorkerTopologyContext context,
+                        GlobalStreamId stream,
+                        List<Integer> targetTasks) {
+      HashSet<Integer> localTasksIds = new HashSet<>();
+      try {
+        BufferedReader br = new BufferedReader(new FileReader("global_task_id_file"));
+        String id;
+        while ((id = br.readLine()) != null) {
+          localTasksIds.add(Integer.parseInt(id));
+        }
+        System.out.println("Task ids local to this container: " + localTasksIds);
+        br.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      } catch (NumberFormatException e) {
+        e.printStackTrace();
+      }
+
+      for (int targetTask : targetTasks) {
+        if (localTasksIds.contains(targetTask)) {
+          localTargetTasksIds.add(targetTask);
+        } else {
+          remoteTargetTaskIds.add(targetTask);
+        }
+      }
+    }
+
+    @Override
+    public List<Integer> chooseTasks(int taskId, List<Object> values) {
+      List<Integer> result = new ArrayList<>();
+      int size = localTargetTasksIds.size();
+      if (size > 0) {
+        result.add(localTargetTasksIds.get(roundRobinIndex++));
+        roundRobinIndex %= size;
+      } else {
+        size = remoteTargetTaskIds.size();
+        result.add(remoteTargetTaskIds.get(roundRobinIndex++));
+        roundRobinIndex %= size;
+      }
+
+      return result;
+    }
+  }
+
   private AckingTopology() {
   }
 
@@ -48,7 +109,7 @@ public final class AckingTopology {
 
     builder.setSpout("word", new AckingTestWordSpout(), 2);
     builder.setBolt("exclaim1", new ExclamationBolt(), 2)
-        .shuffleGrouping("word");
+        .customGrouping("word", new LocalAffinityDirectGrouping());
 
     Config conf = new Config();
     conf.setDebug(true);

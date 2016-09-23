@@ -18,7 +18,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -29,9 +28,11 @@ public class LocalAffinityGrouping implements CustomStreamGrouping {
   private static final Logger LOG = Logger.getLogger(LocalAffinityGrouping.class.getName());
   private static final long serialVersionUID = 1913733461146490337L;
 
-  List<Integer> primaryTarget = new ArrayList<>();
-  List<Integer> secondaryTarget = new ArrayList<>();
-  private boolean roundRobiner = true;
+  List<List<Integer>> localTargetLists = new ArrayList<>();
+  int localTargetSize;
+  List<List<Integer>> remoteTargetLists = new ArrayList<>();
+  int remoteTargetSize;
+  private int roundRobinIndex = 0;
 
   @Override
   public void prepare(TopologyContext context,
@@ -53,42 +54,38 @@ public class LocalAffinityGrouping implements CustomStreamGrouping {
       e.printStackTrace();
     }
 
-    List<Integer> localTargetTasksIds = new ArrayList<>();
+    List<Integer> localTargetTaskIds = new ArrayList<>();
     List<Integer> remoteTargetTaskIds = new ArrayList<>();
     for (int targetTask : targetTasks) {
       if (localTasksIds.contains(targetTask)) {
-        localTargetTasksIds.add(targetTask);
+        localTargetTaskIds.add(targetTask);
       } else {
         remoteTargetTaskIds.add(targetTask);
       }
     }
 
-    Iterator<Integer> localIter = localTargetTasksIds.iterator();
-    Iterator<Integer> remoteIter = remoteTargetTaskIds.iterator();
-    if (localIter.hasNext()) {
-      primaryTarget.add(localIter.next());
-      if (localIter.hasNext()) {
-        secondaryTarget.add(localIter.next());
-      } else if (remoteIter.hasNext()) {
-        secondaryTarget.add(remoteIter.next());
-      }
-    } else if (remoteIter.hasNext()) {
-      primaryTarget.add(remoteIter.next());
-      if (remoteIter.hasNext()) {
-        secondaryTarget.add(remoteIter.next());
-      }
+    localTargetSize = localTargetTaskIds.size();
+    for (int targetId : localTargetTaskIds) {
+      List<Integer> targetList = new ArrayList<>();
+      targetList.add(targetId);
+      localTargetLists.add(targetList);
     }
 
-    System.out.println("Targets: " + primaryTarget + " and " + secondaryTarget);
+    remoteTargetSize = remoteTargetTaskIds.size();
+    for (int targetId : remoteTargetTaskIds) {
+      List<Integer> targetList = new ArrayList<>();
+      targetList.add(targetId);
+      remoteTargetLists.add(targetList);
+    }
+
+    System.out.println("Local targets: " + localTargetTaskIds);
   }
 
   @Override
   public List<Integer> chooseTasks(List<Object> values) {
-    roundRobiner = !roundRobiner;
-    if (roundRobiner) {
-      return secondaryTarget;
-    } else {
-      return primaryTarget;
+    if (++roundRobinIndex >= localTargetSize) {
+      roundRobinIndex = 0;
     }
+    return localTargetLists.get(roundRobinIndex);
   }
 }
