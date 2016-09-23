@@ -45,6 +45,10 @@ public final class NetworkBoundDirectTopology {
     int noSpouts = Integer.parseInt(args[1]);
     int noBolts = Integer.parseInt(args[2]);
     int localAffinity = Integer.parseInt(args[3]);
+    double instancesPerContainer = 4;
+    if (args.length >= 5) {
+      instancesPerContainer = Integer.parseInt(args[4]);
+    }
 
     CustomStreamGrouping grouping = new RemoteAffinityGrouping();
     if (localAffinity == 1) {
@@ -62,11 +66,7 @@ public final class NetworkBoundDirectTopology {
     conf.setEnableAcking(true);
 
     if (args != null && args.length > 0) {
-      if ((noSpouts + noBolts) / 4 < 1) {
-        conf.setNumStmgrs(1);
-      } else {
-        conf.setNumStmgrs((noSpouts + noBolts) / 4);
-      }
+      conf.setNumStmgrs((int) Math.ceil((noBolts + noSpouts)/instancesPerContainer));
       HeronSubmitter.submitTopology(args[0], conf, builder.createTopology());
     }
   }
