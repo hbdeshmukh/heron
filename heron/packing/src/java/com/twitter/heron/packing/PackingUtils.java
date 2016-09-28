@@ -128,7 +128,7 @@ public final class PackingUtils {
       containerDiskInBytes += (paddingPercentage * containerDiskInBytes) / 100;
 
       Resource resource =
-          new Resource(Math.round(containerCpu), containerRam, containerDiskInBytes);
+          new Resource(containerCpu, containerRam, containerDiskInBytes);
 
       PackingPlan.ContainerPlan containerPlan =
           new PackingPlan.ContainerPlan(containerId, instancePlans, resource);
