@@ -81,9 +81,9 @@ public class RoundRobinPacking implements IPacking {
   @VisibleForTesting
   static final long DEFAULT_DISK_PADDING_PER_CONTAINER = 12L * Constants.GB;
   @VisibleForTesting
-  static final long DEFAULT_RAM_PADDING_PER_CONTAINER = 2L * Constants.GB;
+  static final long DEFAULT_RAM_PADDING_PER_CONTAINER = 4L * Constants.GB;
   @VisibleForTesting
-  static final double DEFAULT_CPU_PADDING_PER_CONTAINER = 1;
+  static final double DEFAULT_CPU_PADDING_PER_CONTAINER = 2;
   private static final long MIN_RAM_PER_INSTANCE = 192L * Constants.MB;
 
   // Use as a stub as default number value when getting config value
