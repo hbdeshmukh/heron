@@ -64,6 +64,9 @@ public final class NetworkBoundDirectTopology {
     conf.setMaxSpoutPending(10);
     conf.put(Config.TOPOLOGY_WORKER_CHILDOPTS, "-XX:+HeapDumpOnOutOfMemoryError");
     conf.setEnableAcking(true);
+    if (args.length >= 6) {
+      conf.setContainerPaddingPercentage(Integer.parseInt(args[5]));
+    }
 
     if (args != null && args.length > 0) {
       conf.setNumStmgrs((int) Math.ceil((noBolts + noSpouts)/instancesPerContainer));
