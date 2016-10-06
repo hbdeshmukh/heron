@@ -61,4 +61,12 @@ public class HeronConfigurationOptions {
   @NamedParameter(doc = "verbose logs", default_value = "false")
   public class VerboseLogMode implements Name<Boolean> {
   }
+
+  @NamedParameter(doc = "container's ram allocation")
+  public class ContainerRam implements Name<Integer> {
+  }
+
+  @NamedParameter(doc = "container's cpu cores allocation")
+  public class ContainerCpuCores implements Name<Integer> {
+  }
 }

@@ -30,6 +30,8 @@ import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.TopologyJar;
 import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.TopologyName;
 import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.TopologyPackageName;
 import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.VerboseLogMode;
+import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.ContainerCpuCores;
+import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.ContainerRam;
 
 public class HeronTaskConfiguration extends ConfigurationModuleBuilder {
   public static final RequiredParameter<String> TOPOLOGY_NAME = new RequiredParameter<>();
@@ -42,6 +44,8 @@ public class HeronTaskConfiguration extends ConfigurationModuleBuilder {
   public static final RequiredParameter<String> COMPONENT_RAM_MAP = new RequiredParameter<>();
   public static final RequiredParameter<Integer> CONTAINER_ID = new RequiredParameter<>();
   public static final OptionalParameter<Boolean> VERBOSE = new OptionalParameter<>();
+  public static final OptionalParameter<Integer> RAM = new OptionalParameter<>();
+  public static final OptionalParameter<Integer> CPU_CORES = new OptionalParameter<>();
 
   public static final ConfigurationModule CONF = new HeronTaskConfiguration()
       .merge(TaskConfiguration.CONF)
@@ -55,5 +59,7 @@ public class HeronTaskConfiguration extends ConfigurationModuleBuilder {
       .bindNamedParameter(ComponentRamMap.class, COMPONENT_RAM_MAP)
       .bindNamedParameter(HeronExecutorId.class, CONTAINER_ID)
       .bindNamedParameter(VerboseLogMode.class, VERBOSE)
+      .bindNamedParameter(ContainerCpuCores.class, CPU_CORES)
+      .bindNamedParameter(ContainerRam.class, RAM)
       .build();
 }

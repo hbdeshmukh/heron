@@ -337,6 +337,8 @@ public class HeronMasterDriver {
         .set(HeronTaskConfiguration.COMPONENT_RAM_MAP, getComponentRamMap())
         .set(HeronTaskConfiguration.CONTAINER_ID, workerId)
         .set(HeronTaskConfiguration.VERBOSE, verboseMode)
+        .set(HeronTaskConfiguration.CPU_CORES, worker.get().cores)
+        .set(HeronTaskConfiguration.RAM, worker.get().mem)
         .build();
     worker.get().context.submitTask(taskConf);
   }

@@ -15,6 +15,8 @@
 package com.twitter.heron.scheduler.yarn;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -35,6 +37,8 @@ import com.twitter.heron.api.generated.TopologyAPI.Topology;
 import com.twitter.heron.common.basics.SysUtils;
 import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.Cluster;
 import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.ComponentRamMap;
+import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.ContainerCpuCores;
+import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.ContainerRam;
 import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.Environ;
 import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.HeronCorePackageName;
 import com.twitter.heron.scheduler.yarn.HeronConfigurationOptions.HeronExecutorId;
@@ -64,12 +68,14 @@ public class HeronExecutorTask implements Task {
   private final String topologyJar;
   private final String componentRamMap;
   private final boolean verboseMode;
+  private final int ramAllocated;
 
   private REEFFileNames reefFileNames;
   private String localHeronConfDir;
 
   // Reference to the thread waiting for heron executor to complete
   private volatile Thread processTarget;
+  private boolean dockerExecutor = true;
 
   @Inject
   public HeronExecutorTask(final REEFFileNames fileNames,
@@ -82,6 +88,8 @@ public class HeronExecutorTask implements Task {
                            @Parameter(HeronCorePackageName.class) String heronCorePackageName,
                            @Parameter(TopologyJar.class) String topologyJar,
                            @Parameter(ComponentRamMap.class) String componentRamMap,
+                           @Parameter(ContainerRam.class) int ram,
+                           @Parameter(ContainerCpuCores.class) int cores,
                            @Parameter(VerboseLogMode.class) boolean verboseMode) {
     this.heronExecutorId = heronExecutorId;
     this.cluster = cluster;
@@ -93,6 +101,7 @@ public class HeronExecutorTask implements Task {
     this.topologyJar = topologyJar;
     this.componentRamMap = componentRamMap;
     this.verboseMode = verboseMode;
+    this.ramAllocated = ram;
 
     reefFileNames = fileNames;
     localHeronConfDir = ".";
@@ -116,13 +125,35 @@ public class HeronExecutorTask implements Task {
     String cwdPath = workingDirectory.getAbsolutePath();
     LOG.log(Level.INFO, "Working dir: {0}", cwdPath);
 
-    HashMap<String, String> executorEnvironment = getEnvironment(cwdPath);
+    Process regularExecutor = null;
+    if (dockerExecutor) {
+      createExecutorExecFile(executorCmd);
+      String dockerCommand = String.format("docker run " +
+          " --memory=%dm " +
+          " --name executor-" + heronExecutorId +
+          " -v %s:/heron " +
+          " -w=/heron " +
+          " --net=host " +
+          " heron:heron " +
+          " ./command", ramAllocated, workingDirectory.getAbsolutePath());
 
-    final Process regularExecutor = ShellUtils.runASyncProcess(
-        true,
-        executorCmd,
-        workingDirectory,
-        executorEnvironment);
+      StringBuilder outString = new StringBuilder();
+      StringBuilder errString = new StringBuilder();
+      ShellUtils.runSyncProcess(true, true, dockerCommand, outString, errString, workingDirectory);
+      LOG.info("Docker command: " + dockerCommand);
+      LOG.info("Docker command output: " + outString.toString());
+      LOG.info("Docker command error: " + errString.toString());
+
+      // TODO stop and delete by container name before exiting
+    } else {
+      HashMap<String, String> executorEnvironment = getEnvironment(cwdPath);
+      regularExecutor = ShellUtils.runASyncProcess(
+          true,
+          executorCmd,
+          workingDirectory,
+          executorEnvironment);
+    }
+
     LOG.log(Level.INFO, "Started heron executor-id: {0}", heronExecutorId);
     try {
       regularExecutor.waitFor();
@@ -132,6 +163,18 @@ public class HeronExecutorTask implements Task {
       regularExecutor.destroy();
     }
     return null;
+  }
+
+  private void createExecutorExecFile(String[] executorCmd) throws IOException {
+    File commandFile = new File("command.sh");
+    commandFile.setExecutable(true);
+    commandFile.createNewFile();
+
+    FileWriter writer = new FileWriter(commandFile);
+    for (String commandArgs : executorCmd) {
+      writer.write(commandArgs + " ");
+    }
+    writer.close();
   }
 
   HashMap<String, String> getEnvironment(String cwdPath) {
