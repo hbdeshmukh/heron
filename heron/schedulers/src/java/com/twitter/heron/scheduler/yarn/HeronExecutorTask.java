@@ -76,6 +76,7 @@ public class HeronExecutorTask implements Task {
   // Reference to the thread waiting for heron executor to complete
   private volatile Thread processTarget;
   private boolean dockerExecutor = true;
+  private String dockerImageName = "heron:heron";
 
   @Inject
   public HeronExecutorTask(final REEFFileNames fileNames,
@@ -127,22 +128,17 @@ public class HeronExecutorTask implements Task {
 
     Process regularExecutor = null;
     if (dockerExecutor) {
-      createExecutorExecFile(executorCmd);
-      String dockerCommand = String.format("docker run " +
-          " --memory=%dm " +
-          " --name executor-" + heronExecutorId +
-          " -v %s:/heron " +
-          " -w=/heron " +
-          " --net=host " +
-          " heron:heron " +
-          " ./command", ramAllocated, workingDirectory.getAbsolutePath());
+      String containerName = topologyName + "-" + heronExecutorId;
+      String dockerCommand = String.format("docker run -d -w=/heron --net=host" +
+              " --memory=%dm --name %s -v %s:/heron %s /heron/command.sh",
+          ramAllocated, containerName, cwdPath, dockerImageName);
 
-      StringBuilder outString = new StringBuilder();
-      StringBuilder errString = new StringBuilder();
-      ShellUtils.runSyncProcess(true, true, dockerCommand, outString, errString, workingDirectory);
-      LOG.info("Docker command: " + dockerCommand);
-      LOG.info("Docker command output: " + outString.toString());
-      LOG.info("Docker command error: " + errString.toString());
+      createExecutorExecFile(executorCmd);
+      LOG.info("Docker container launch command: " + dockerCommand);
+      regularExecutor = ShellUtils.runASyncProcess(
+          true,
+          dockerCommand.split(" "),
+          workingDirectory);
 
       // TODO stop and delete by container name before exiting
     } else {
@@ -171,6 +167,7 @@ public class HeronExecutorTask implements Task {
     commandFile.createNewFile();
 
     FileWriter writer = new FileWriter(commandFile);
+    writer.write(String.format("#!/bin/bash%n"));
     for (String commandArgs : executorCmd) {
       writer.write(commandArgs + " ");
     }
