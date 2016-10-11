@@ -76,7 +76,7 @@ public class HeronExecutorTask implements Task {
   // Reference to the thread waiting for heron executor to complete
   private volatile Thread processTarget;
   private boolean dockerExecutor = true;
-  private String dockerImageName = "heron:heron";
+  private String dockerImageName = "heron:latest";
 
   @Inject
   public HeronExecutorTask(final REEFFileNames fileNames,
@@ -123,40 +123,17 @@ public class HeronExecutorTask implements Task {
     // Log the working directory, this will make people fast locate the
     // directory to find the log files
     File workingDirectory = new File(".");
-    String cwdPath = workingDirectory.getAbsolutePath();
-    LOG.log(Level.INFO, "Working dir: {0}", cwdPath);
+    LOG.log(Level.INFO, "Working dir: {0}", workingDirectory.getAbsolutePath());
 
-    Process regularExecutor = null;
-    if (dockerExecutor) {
-      String containerName = topologyName + "-" + heronExecutorId;
-      String dockerCommand = String.format("docker run -d -w=/heron --net=host" +
-              " --memory=%dm --name %s -v %s:/heron %s /heron/command.sh",
-          ramAllocated, containerName, cwdPath, dockerImageName);
-
-      createExecutorExecFile(executorCmd);
-      LOG.info("Docker container launch command: " + dockerCommand);
-      regularExecutor = ShellUtils.runASyncProcess(
-          true,
-          dockerCommand.split(" "),
-          workingDirectory);
-
-      // TODO stop and delete by container name before exiting
-    } else {
-      HashMap<String, String> executorEnvironment = getEnvironment(cwdPath);
-      regularExecutor = ShellUtils.runASyncProcess(
-          true,
-          executorCmd,
-          workingDirectory,
-          executorEnvironment);
-    }
-
+    Process process = launchExecutorProcess(workingDirectory, executorCmd);
     LOG.log(Level.INFO, "Started heron executor-id: {0}", heronExecutorId);
+
     try {
-      regularExecutor.waitFor();
+      waitForTermination(process, workingDirectory);
       LOG.log(Level.WARNING, "Heron executor process terminated");
     } catch (InterruptedException e) {
       LOG.log(Level.INFO, "Destroy heron executor-id: {0}", heronExecutorId);
-      regularExecutor.destroy();
+      destroy(process, workingDirectory);
     }
     return null;
   }
@@ -216,6 +193,66 @@ public class HeronExecutorTask implements Task {
 
   Topology getTopology(String topologyDefFile) {
     return TopologyUtils.getTopology(topologyDefFile);
+  }
+
+  Process launchExecutorProcess(File workingDirectory, String[] executorCmd) throws IOException {
+    String cwdPath = workingDirectory.getAbsolutePath();
+
+    Process regularExecutor;
+    if (dockerExecutor) {
+      String containerName = topologyName + "-" + heronExecutorId;
+      String dockerCommand = String.format("docker run -d -w=/heron --net=host" +
+              " --memory=%dm --name %s -v %s:/heron %s /heron/command.sh",
+          ramAllocated, containerName, cwdPath, dockerImageName);
+
+      createExecutorExecFile(executorCmd);
+      LOG.info("Docker container launch command: " + dockerCommand);
+      regularExecutor = ShellUtils.runASyncProcess(
+          true,
+          dockerCommand.split(" "),
+          workingDirectory);
+    } else {
+      HashMap<String, String> executorEnvironment = getEnvironment(cwdPath);
+      regularExecutor = ShellUtils.runASyncProcess(
+          true,
+          executorCmd,
+          workingDirectory,
+          executorEnvironment);
+    }
+    return regularExecutor;
+  }
+
+  void waitForTermination(Process regularExecutor, File pwd) throws InterruptedException {
+    if (dockerExecutor) {
+      String containerName = topologyName + "-" + heronExecutorId;
+      String dockerCommand = String.format("docker attach %s", containerName);
+      regularExecutor = ShellUtils.runASyncProcess(
+          true,
+          dockerCommand.split(" "),
+          pwd);
+      regularExecutor.waitFor();
+    } else {
+      regularExecutor.waitFor();
+    }
+  }
+
+  public void destroy(Process regularExecutor, File pwd) {
+    if (dockerExecutor) {
+      regularExecutor.destroy();
+      String containerName = topologyName + "-" + heronExecutorId;
+      String dockerCommand = String.format("docker stop %s", containerName);
+      regularExecutor = ShellUtils.runASyncProcess(
+          true,
+          dockerCommand.split(" "),
+          pwd);
+      try {
+        regularExecutor.waitFor();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    } else {
+      regularExecutor.destroy();
+    }
   }
 
   /**
