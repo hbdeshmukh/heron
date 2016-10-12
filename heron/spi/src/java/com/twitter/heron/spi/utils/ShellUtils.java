@@ -155,11 +155,11 @@ public final class ShellUtils {
     String stdoutString = pStdOut.toString();
     String stderrString = pStdErr.toString();
     if (!stdoutString.isEmpty()) {
-      LOG.log(Level.FINE, "\nSTDOUT:\n {0}", stdoutString);
+      LOG.log(Level.INFO, "\nSTDOUT:\n {0}", stdoutString);
     }
 
     if (!stderrString.isEmpty()) {
-      LOG.log(Level.FINE, "\nSTDERR:\n {0}", stderrString);
+      LOG.log(Level.INFO, "\nSTDERR:\n {0}", stderrString);
     }
 
     return exitValue;
@@ -188,7 +188,7 @@ public final class ShellUtils {
 
   private static Process runASyncProcess(String[] command, File workingDirectory,
       Map<String, String> envs, String logFileUuid, boolean logStderr) {
-    LOG.log(Level.FINE, "$> {0}", Arrays.toString(command));
+    LOG.log(Level.INFO, "$> {0}", Arrays.toString(command));
 
     // the log file can help people to find out what happened between pb.start()
     // and the async process started

@@ -129,7 +129,7 @@ public class HeronExecutorTask implements Task {
     LOG.log(Level.INFO, "Started heron executor-id: {0}", heronExecutorId);
 
     try {
-      waitForTermination(process, workingDirectory);
+      process = waitForTermination(process, workingDirectory);
       LOG.log(Level.WARNING, "Heron executor process terminated");
     } catch (InterruptedException e) {
       LOG.log(Level.INFO, "Destroy heron executor-id: {0}", heronExecutorId);
@@ -200,17 +200,20 @@ public class HeronExecutorTask implements Task {
 
     Process regularExecutor;
     if (dockerExecutor) {
+      createExecutorExecFile(executorCmd);
+
       String containerName = topologyName + "-" + heronExecutorId;
       String dockerCommand = String.format("docker run -d -w=/heron --net=host" +
               " --memory=%dm --name %s -v %s:/heron %s /heron/command.sh",
           ramAllocated, containerName, cwdPath, dockerImageName);
-
-      createExecutorExecFile(executorCmd);
       LOG.info("Docker container launch command: " + dockerCommand);
-      regularExecutor = ShellUtils.runASyncProcess(
-          true,
-          dockerCommand.split(" "),
-          workingDirectory);
+
+      StringBuilder stdout = new StringBuilder();
+      StringBuilder stderr = new StringBuilder();
+      ShellUtils.runSyncProcess(true, true, dockerCommand, stdout, stderr, workingDirectory);
+      LOG.info("Docker stdout: " + stdout.toString());
+      LOG.info("Docker stderr: " + stderr.toString());
+      return null;
     } else {
       HashMap<String, String> executorEnvironment = getEnvironment(cwdPath);
       regularExecutor = ShellUtils.runASyncProcess(
@@ -218,22 +221,23 @@ public class HeronExecutorTask implements Task {
           executorCmd,
           workingDirectory,
           executorEnvironment);
+      return regularExecutor;
     }
-    return regularExecutor;
   }
 
-  void waitForTermination(Process regularExecutor, File pwd) throws InterruptedException {
+  Process waitForTermination(Process regularExecutor, File pwd) throws InterruptedException {
     if (dockerExecutor) {
       String containerName = topologyName + "-" + heronExecutorId;
       String dockerCommand = String.format("docker attach %s", containerName);
-      regularExecutor = ShellUtils.runASyncProcess(
-          true,
-          dockerCommand.split(" "),
-          pwd);
-      regularExecutor.waitFor();
+      StringBuilder stdout = new StringBuilder();
+      StringBuilder stderr = new StringBuilder();
+      ShellUtils.runSyncProcess(true, true, dockerCommand, stdout, stderr, pwd);
+      LOG.info("Docker stdout: " + stdout.toString());
+      LOG.info("Docker stderr: " + stderr.toString());
     } else {
       regularExecutor.waitFor();
     }
+    return regularExecutor;
   }
 
   public void destroy(Process regularExecutor, File pwd) {
@@ -241,15 +245,11 @@ public class HeronExecutorTask implements Task {
       regularExecutor.destroy();
       String containerName = topologyName + "-" + heronExecutorId;
       String dockerCommand = String.format("docker stop %s", containerName);
-      regularExecutor = ShellUtils.runASyncProcess(
-          true,
-          dockerCommand.split(" "),
-          pwd);
-      try {
-        regularExecutor.waitFor();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+      StringBuilder stdout = new StringBuilder();
+      StringBuilder stderr = new StringBuilder();
+      ShellUtils.runSyncProcess(true, true, dockerCommand, stdout, stderr, pwd);
+      LOG.info("Docker stdout: " + stdout.toString());
+      LOG.info("Docker stderr: " + stderr.toString());
     } else {
       regularExecutor.destroy();
     }
