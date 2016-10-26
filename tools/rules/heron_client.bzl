@@ -37,7 +37,12 @@ def heron_client_lib_scheduler_files():
         "//heron/schedulers/src/java:heron-mesos-scheduler",
         "//heron/schedulers/src/java:heron-marathon-scheduler",
         "//heron/packing/src/java:heron-roundrobin-packing",
-	"//heron/packing/src/java:heron-binpacking-packing",
+        "//heron/packing/src/java:heron-binpacking-packing",
+    ]
+
+def heron_client_lib_slamgr_files():
+    return [
+        "//heron/slamgr/src/java:heron-slamgr",
     ]
 
 def heron_client_lib_packing_files():

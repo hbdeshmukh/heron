@@ -12,8 +12,73 @@ maven_server(
 )
 
 maven_jar(
+  name = "javax_ws_rs_javax_ws_rs_api",
+  artifact = "javax.ws.rs:javax.ws.rs-api:2.0.1",
+)
+
+maven_jar(
+   name = "org_glassfish_jersey_core_jersey_client",
+   artifact = "org.glassfish.jersey.core:jersey-client:2.24",
+)
+
+maven_jar(
+   name = "org_glassfish_hk2_hk2_api",
+   artifact = "org.glassfish.hk2:hk2-api:2.5.0-b05",
+)
+
+maven_jar(
+   name = "org_glassfish_jersey_ext_jersey_entity_filtering",
+   artifact = "org.glassfish.jersey.ext:jersey-entity-filtering:2.24",
+)
+
+maven_jar(
+   name = "javax_annotation_javax_annotation_api",
+   artifact = "javax.annotation:javax.annotation-api:1.2",
+)
+
+maven_jar(
+   name = "com_fasterxml_jackson_module_jackson_module_jaxb_annotations",
+   artifact = "com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.5.4",
+)
+
+maven_jar(
+   name = "com_fasterxml_jackson_jaxrs_jackson_jaxrs_json_provider",
+   artifact = "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.5.4",
+)
+
+maven_jar(
+   name = "com_fasterxml_jackson_jaxrs_jackson_jaxrs_base",
+   artifact = "com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.5.4",
+)
+
+maven_jar(
+   name = "org_glassfish_hk2_hk2_locator",
+   artifact = "org.glassfish.hk2:hk2-locator:2.5.0-b05",
+)
+
+maven_jar(
+   name = "org_glassfish_hk2_hk2_utils",
+   artifact = "org.glassfish.hk2:hk2-utils:2.5.0-b05",
+)
+
+maven_jar(
+   name = "org_glassfish_jersey_bundles_repackaged_jersey_guava",
+   artifact = "org.glassfish.jersey.bundles.repackaged:jersey-guava:2.24",
+)
+
+maven_jar(
+   name = "org_glassfish_jersey_core_jersey_common",
+   artifact = "org.glassfish.jersey.core:jersey-common:2.24",
+)
+
+maven_jar(
+   name = "org_glassfish_jersey_media_jersey_media_json_jackson",
+   artifact = "org.glassfish.jersey.media:jersey-media-json-jackson:2.24",
+)
+
+maven_jar(
   name = "org_apache_avro_avro",
-  artifact = "org.apache.avro:avro:1.7.4"
+  artifact = "org.apache.avro:avro:1.7.4",
 )
 
 maven_server(
