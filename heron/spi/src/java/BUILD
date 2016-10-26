@@ -13,6 +13,7 @@ java_library(
         "**/spi/utils/**/*.java",
         "**/spi/statemgr/**/*.java",
         "**/spi/metricsmgr/**/*.java",
+        "**/spi/slamgr/**/*.java",
     ]),
     deps = [
         "//heron/api/src/java:api-java",
@@ -54,6 +55,7 @@ utils_deps_files = \
         ":scheduler-spi-java",
         ":packing-spi-java",
         ":metricsmgr-spi-java",
+        ":slamgr-spi-java",
         "//heron/common/src/java:basics-java",
         "//heron/common/src/java:config-java",
         "//heron/api/src/java:api-java",
@@ -64,6 +66,7 @@ scheduler_deps_files = \
     heron_java_proto_files() + [
         ":common-spi-java",
         ":packing-spi-java",
+        ":slamgr-spi-java",
         "//heron/api/src/java:classification",
         "//heron/common/src/java:config-java",
         "@com_google_guava_guava//jar",
@@ -79,9 +82,28 @@ packing_deps_files = [
     "@com_google_guava_guava//jar",
 ]
 
+metrics_deps_files = [
+  ":common-spi-java",
+  "//heron/proto:proto_topology_java",
+
+]
+
+
 uploader_deps_files = [
     ":common-spi-java",
     "//heron/common/src/java:config-java",
+]
+
+slamgr_deps_files = [
+    "//heron/api/src/java:api-java",
+    ":common-spi-java",
+    "//heron/api/src/java:classification",
+    "//heron/common/src/java:config-java",
+    "//heron/proto:proto_packing_plan_java",
+    "//heron/proto:proto_topology_java",
+    "//heron/spi/src/java:packing-spi-java",
+    "//heron/spi/src/java:metricsmgr-spi-java",
+    "@com_google_guava_guava//jar",
 ]
 
 statemgr_deps_files = \
@@ -167,6 +189,15 @@ java_library(
     srcs = glob(
         ["**/spi/metricsmgr/**/*.java"],
     ),
+    deps = metrics_deps_files,
+)
+
+java_library(
+    name='slamgr-spi-java',
+    srcs = glob(
+        ["**/spi/slamgr/**/*.java"],
+    ),
+    deps = slamgr_deps_files,
 )
 
 java_library(
@@ -182,6 +213,7 @@ java_binary(
     srcs = glob([
         "**/spi/common/**/*.java",
         "**/spi/metricsmgr/**/*.java",
+        "**/spi/slamgr/**/*.java",
         "**/spi/packing/**/*.java",
         "**/spi/scheduler/**/*.java",
         "**/spi/statemgr/**/*.java",

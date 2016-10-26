@@ -12,8 +12,28 @@ maven_server(
 )
 
 maven_jar(
+  name = "javax_ws_rs_javax_ws_rs_api",
+  artifact = "javax.ws.rs:javax.ws.rs-api:2.0.1",
+)
+
+maven_jar(
+   name = "org_glassfish_jersey_core_jersey_client",
+   artifact = "org.glassfish.jersey.core:jersey-client:2.24",
+)
+
+maven_jar(
+   name = "org_glassfish_jersey_core_jersey_common",
+   artifact = "org.glassfish.jersey.core:jersey-common:2.24",
+)
+
+maven_jar(
+   name = "org_glassfish_jersey_media_jersey_media_json_jackson",
+   artifact = "org.glassfish.jersey.media:jersey-media-json-jackson:2.24",
+)
+
+maven_jar(
   name = "org_apache_avro_avro",
-  artifact = "org.apache.avro:avro:1.7.4"
+  artifact = "org.apache.avro:avro:1.7.4",
 )
 
 maven_server(
