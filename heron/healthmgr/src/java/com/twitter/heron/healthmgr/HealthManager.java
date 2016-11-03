@@ -14,6 +14,10 @@
 
 package com.twitter.heron.healthmgr;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,14 +29,31 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.utils.logging.LoggingHelper;
+import com.twitter.heron.healthmgr.policy.FailedTuplesPolicy;
+import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.spi.common.ClusterConfig;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
 
+import com.twitter.heron.spi.common.Context;
+import com.twitter.heron.spi.healthmgr.SLAPolicy;
+import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
+import com.twitter.heron.spi.statemgr.IStateManager;
+import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
+import com.twitter.heron.spi.utils.ReflectionUtils;
+
+/**
+ * e.g. options
+ * -d ~/.heron -p ~/.heron/conf/local -c local -e default -r userName -t AckingTopology
+ */
 public class HealthManager {
   private static final Logger LOG = Logger.getLogger(HealthManager.class.getName());
   private final Config config;
+  private SLAPolicy policy;
+  private SinkVisitor sinkVisitor;
+  private ScheduledExecutorService executor;
 
   public HealthManager(Config config) {
     this.config = config;
@@ -45,7 +66,6 @@ public class HealthManager {
    * @param role, user role
    * @param environ, user provided environment/tag
    * @param verbose, enable verbose logging
-   * @param topologyName
    * @return config, the command line config
    */
   protected static Config commandLineConfigs(String cluster,
@@ -70,7 +90,7 @@ public class HealthManager {
   }
 
   // Construct all required command line options
-  private static Options constructOptions() {
+  private static Options constructCliOptions() {
     Options options = new Options();
 
     Option cluster = Option.builder("c")
@@ -94,7 +114,6 @@ public class HealthManager {
         .longOpt("environment")
         .hasArgs()
         .argName("environment")
-//        .required()
         .build();
 
     Option heronHome = Option.builder("d")
@@ -120,13 +139,6 @@ public class HealthManager {
         .argName("override config file")
         .build();
 
-    Option releaseFile = Option.builder("b")
-        .desc("Release file name")
-        .longOpt("release_file")
-        .hasArgs()
-        .argName("release information")
-        .build();
-
     Option topologyName = Option.builder("n")
         .desc("Name of the topology")
         .longOpt("topology_name")
@@ -146,7 +158,6 @@ public class HealthManager {
     options.addOption(heronHome);
     options.addOption(configFile);
     options.addOption(configOverrides);
-    options.addOption(releaseFile);
     options.addOption(topologyName);
     options.addOption(verbose);
 
@@ -166,22 +177,21 @@ public class HealthManager {
   }
 
   public static void main(String[] args) throws Exception {
-    Options options = constructOptions();
-    Options helpOptions = constructHelpOptions();
     CommandLineParser parser = new DefaultParser();
-    // parse the help options first.
-    CommandLine cmd = parser.parse(helpOptions, args, true);
+    Options slaManagerCliOptions = constructCliOptions();
 
+    // parse the help options first.
+    Options helpOptions = constructHelpOptions();
+    CommandLine cmd = parser.parse(helpOptions, args, true);
     if (cmd.hasOption("h")) {
-      usage(options);
+      usage(slaManagerCliOptions);
       return;
     }
 
     try {
-      // Now parse the required options
-      cmd = parser.parse(options, args);
+      cmd = parser.parse(slaManagerCliOptions, args);
     } catch (ParseException e) {
-      usage(options);
+      usage(slaManagerCliOptions);
       throw new RuntimeException("Error parsing command line options: ", e);
     }
 
@@ -210,15 +220,72 @@ public class HealthManager {
         .putAll(commandLineConfigs(cluster, role, environ, topologyName, verbose))
         .build());
 
-    LOG.fine("Static config loaded successfully ");
+    LOG.info("Static config loaded successfully ");
     LOG.fine(config.toString());
 
     HealthManager healthManager = new HealthManager(config);
-    healthManager.run();
+    healthManager.initialize();
+
+    LOG.info("Starting the SLA manager");
+    ScheduledFuture<?> future = healthManager.start();
+    try {
+      future.get();
+    } catch (Exception e) {
+      healthManager.executor.shutdownNow();
+      throw e;
+    }
   }
 
-  private void run() {
-    LOG.info("Starting the SLA manager");
-    System.out.println(config);
+  private void initialize() throws ReflectiveOperationException {
+    SchedulerStateManagerAdaptor adaptor = createStateMgrAdaptor();
+    TopologyAPI.Topology topology = getTopology(adaptor);
+
+    Config tmpRuntime = Config.newBuilder()
+        .put(Key.TOPOLOGY_DEFINITION, topology)
+        .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
+        .build();
+
+    // TODO rename sinkvisitor
+    sinkVisitor = new TrackerVisitor();
+    sinkVisitor.initialize(config, tmpRuntime);
+
+    Config runtime = Config.newBuilder()
+        .putAll(tmpRuntime)
+        .put(Key.METRICS_READER_INSTANCE, sinkVisitor)
+        .build();
+
+    // TODO READ policy from yaml
+    policy = new FailedTuplesPolicy();
+    policy.initialize(config, runtime);
+  }
+
+  private TopologyAPI.Topology getTopology(SchedulerStateManagerAdaptor adaptor) {
+    String topologyName = Context.topologyName(config);
+    LOG.log(Level.INFO, "Fetching topology from state manager: {0}", topologyName);
+    TopologyAPI.Topology topology = adaptor.getTopology(topologyName);
+    if (topology == null) {
+      throw new RuntimeException(String.format("Failed to fetch topology: %s", topologyName));
+    }
+    return topology;
+  }
+
+  private SchedulerStateManagerAdaptor createStateMgrAdaptor() throws ReflectiveOperationException {
+    String statemgrClass = Context.stateManagerClass(config);
+    IStateManager statemgr = ReflectionUtils.newInstance(statemgrClass);
+    statemgr.initialize(config);
+    return new SchedulerStateManagerAdaptor(statemgr, 5000);
+  }
+
+  private ScheduledFuture<?> start() {
+    executor = Executors.newScheduledThreadPool(1);
+    ScheduledFuture<?> future = executor.scheduleWithFixedDelay(new Runnable() {
+      @Override
+      public void run() {
+        LOG.info("Executing SLA Policy: " + policy.getClass().getSimpleName());
+        policy.execute();
+      }
+    }, 1, 15, TimeUnit.SECONDS);
+
+    return future;
   }
 }

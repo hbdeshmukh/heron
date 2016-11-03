@@ -121,6 +121,9 @@ public enum Key {
   INSTANCE_JVM_OPTS_IN_BASE64         ("heron.runtime.instance.jvm.opts.in.base64"),
   NUM_CONTAINERS                      ("heron.runtime.num.containers"),
 
+  //keys for health manager
+  METRICS_READER_INSTANCE             ("heron.runtime.metrics.reader"),
+
   //release info
   HERON_RELEASE_PACKAGE               ("heron.release.package"),
   HERON_RELEASE_PACKAGE_ROLE          ("heron.release.package.role"),

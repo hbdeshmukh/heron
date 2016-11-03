@@ -26,6 +26,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
@@ -36,7 +37,8 @@ public class TrackerVisitor implements SinkVisitor {
   private List<TopologyAPI.Bolt> bolts;
 
   @Override
-  public void initialize(Config conf, TopologyAPI.Topology topology) {
+  public void initialize(Config conf, Config runtime) {
+    TopologyAPI.Topology topology = Runtime.topology(runtime);
     this.bolts = topology.getBoltsList();
     Client client = ClientBuilder.newClient();
     this.target = client.target("http://localhost:8888/topologies/metrics")

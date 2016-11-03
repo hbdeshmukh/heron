@@ -1,0 +1,2 @@
+# scheduler class for distributing the topology for execution
+heron.class.slamgr.slapolicy:            com.twitter.heron.slamgr.policy.FailedTuplesPolicy

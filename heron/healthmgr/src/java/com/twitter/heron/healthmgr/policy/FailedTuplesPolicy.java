@@ -19,7 +19,9 @@ import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.detector.FailedTuplesDetector;
 import com.twitter.heron.healthmgr.detector.FailedTuplesResult;
 import com.twitter.heron.healthmgr.resolver.FailedTuplesResolver;
+import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
+import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.SLAPolicy;
 
@@ -30,8 +32,8 @@ public class FailedTuplesPolicy implements SLAPolicy {
   private TopologyAPI.Topology topology;
 
   @Override
-  public void initialize(Config conf, Config runtime, TopologyAPI.Topology topology) {
-    this.topology = topology;
+  public void initialize(Config conf, Config runtime) {
+    this.topology = Runtime.topology(runtime);
     detector.initialize(conf, runtime);
     resolver.initialize(conf, runtime);
   }

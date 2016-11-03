@@ -28,7 +28,7 @@ public interface SinkVisitor extends AutoCloseable {
   /**
    * Initialize the sinkVisitor by associating it with a metrics collector and a topology.
    */
-  void initialize(Config conf, TopologyAPI.Topology topology);
+  void initialize(Config conf, Config runtime);
 
 
   /**

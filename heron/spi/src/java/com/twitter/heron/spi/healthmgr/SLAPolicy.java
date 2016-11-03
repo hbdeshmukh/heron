@@ -13,16 +13,14 @@
 // limitations under the License.
 package com.twitter.heron.spi.healthmgr;
 
-import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 
 public interface SLAPolicy extends AutoCloseable {
 
   /**
    * Initialize the SLA policy
    */
-  void initialize(Config conf, Config runtime, TopologyAPI.Topology topology);
+  void initialize(Config conf, Config runtime);
 
   /**
    * It executes a set of detectors and resolvers. This method implements all the logic

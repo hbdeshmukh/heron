@@ -20,6 +20,7 @@ import java.util.Properties;
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
+import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.scheduler.ILauncher;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
@@ -79,5 +80,9 @@ public final class Runtime {
 
   public static Properties schedulerProperties(Config runtime) {
     return (Properties) runtime.get(Key.SCHEDULER_PROPERTIES);
+  }
+
+  public static SinkVisitor metricsReader(Config runtime) {
+    return (SinkVisitor) runtime.get(Key.METRICS_READER_INSTANCE);
   }
 }

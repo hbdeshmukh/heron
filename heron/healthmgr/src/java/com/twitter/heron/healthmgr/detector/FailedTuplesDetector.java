@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IDetector;
@@ -32,11 +33,12 @@ public class FailedTuplesDetector implements IDetector<FailedTuplesResult> {
 
   @Override
   public void initialize(Config config, Config runtime) {
+    visitor = Runtime.metricsReader(runtime);
   }
 
   @Override
   public Diagnosis<FailedTuplesResult> detect(TopologyAPI.Topology topology) {
-    Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric("__fail-count/default");
+    Iterable<MetricsInfo> metricsResults = visitor.getNextMetric("__fail-count/default");
     Set<FailedTuplesResult> instanceInfo = new HashSet<FailedTuplesResult>();
     for (MetricsInfo metricsInfo : metricsResults) {
       String[] parts = metricsInfo.getName().split("_");
