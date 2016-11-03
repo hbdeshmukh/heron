@@ -14,6 +14,10 @@
 
 package com.twitter.heron.slamgr;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,15 +29,33 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.utils.logging.LoggingHelper;
+import com.twitter.heron.slamgr.policy.FailedTuplesPolicy;
+import com.twitter.heron.slamgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.spi.common.ClusterConfig;
 import com.twitter.heron.spi.common.ClusterDefaults;
 import com.twitter.heron.spi.common.Config;
+import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.common.Keys;
+import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
+import com.twitter.heron.spi.slamgr.SLAPolicy;
+import com.twitter.heron.spi.statemgr.IStateManager;
+import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
+import com.twitter.heron.spi.utils.ReflectionUtils;
 
+/**
+ * e.g. options
+ * -d ~/.heron -p ~/.heron/conf/local -c local -e default -r userName -t AckingTopology
+ */
 public class SLAManager {
   private static final Logger LOG = Logger.getLogger(SLAManager.class.getName());
+  private static String topologyName;
   private final Config config;
+  private SLAPolicy policy;
+  private SinkVisitor sinkVisitor;
+  private ScheduledExecutorService executor;
+  private TopologyAPI.Topology topology;
 
   public SLAManager(Config config) {
     this.config = config;
@@ -53,20 +75,6 @@ public class SLAManager {
         .putAll(ClusterDefaults.getDefaults())
         .putAll(ClusterDefaults.getSandboxDefaults())
         .putAll(ClusterConfig.loadConfig(heronHome, configPath, releaseFile))
-        .build();
-    return config;
-  }
-
-  /**
-   * Load the override config from cli
-   *
-   * @param overrideConfigPath, override config file path
-   * <p>
-   * @return config, the override config
-   */
-  protected static Config overrideConfigs(String overrideConfigPath) {
-    Config config = Config.newBuilder()
-        .putAll(ClusterConfig.loadOverrideConfig(overrideConfigPath))
         .build();
     return config;
   }
@@ -101,7 +109,7 @@ public class SLAManager {
   }
 
   // Construct all required command line options
-  private static Options constructOptions() {
+  private static Options constructCliOptions() {
     Options options = new Options();
 
     Option cluster = Option.builder("c")
@@ -109,7 +117,7 @@ public class SLAManager {
         .longOpt("cluster")
         .hasArgs()
         .argName("cluster")
-//        .required()
+        .required()
         .build();
 
     Option role = Option.builder("r")
@@ -117,7 +125,7 @@ public class SLAManager {
         .longOpt("role")
         .hasArgs()
         .argName("role")
-//        .required()
+        .required()
         .build();
 
     Option environment = Option.builder("e")
@@ -125,7 +133,7 @@ public class SLAManager {
         .longOpt("environment")
         .hasArgs()
         .argName("environment")
-//        .required()
+        .required()
         .build();
 
     Option heronHome = Option.builder("d")
@@ -133,7 +141,7 @@ public class SLAManager {
         .longOpt("heron_home")
         .hasArgs()
         .argName("heron home dir")
-//        .required()
+        .required()
         .build();
 
     Option configFile = Option.builder("p")
@@ -141,21 +149,15 @@ public class SLAManager {
         .longOpt("config_path")
         .hasArgs()
         .argName("config path")
-//        .required()
+        .required()
         .build();
 
-    Option configOverrides = Option.builder("o")
-        .desc("Command line override config path")
-        .longOpt("override_config_file")
+    Option topologyName = Option.builder("t")
+        .desc("Topology name")
+        .longOpt("topology_name")
         .hasArgs()
-        .argName("override config file")
-        .build();
-
-    Option releaseFile = Option.builder("b")
-        .desc("Release file name")
-        .longOpt("release_file")
-        .hasArgs()
-        .argName("release information")
+        .argName("topology name")
+        .required()
         .build();
 
     Option verbose = Option.builder("v")
@@ -168,8 +170,7 @@ public class SLAManager {
     options.addOption(environment);
     options.addOption(heronHome);
     options.addOption(configFile);
-    options.addOption(configOverrides);
-    options.addOption(releaseFile);
+    options.addOption(topologyName);
     options.addOption(verbose);
 
     return options;
@@ -188,22 +189,21 @@ public class SLAManager {
   }
 
   public static void main(String[] args) throws Exception {
-    Options options = constructOptions();
-    Options helpOptions = constructHelpOptions();
     CommandLineParser parser = new DefaultParser();
-    // parse the help options first.
-    CommandLine cmd = parser.parse(helpOptions, args, true);
+    Options slaManagerCliOptions = constructCliOptions();
 
+    // parse the help options first.
+    Options helpOptions = constructHelpOptions();
+    CommandLine cmd = parser.parse(helpOptions, args, true);
     if (cmd.hasOption("h")) {
-      usage(options);
+      usage(slaManagerCliOptions);
       return;
     }
 
     try {
-      // Now parse the required options
-      cmd = parser.parse(options, args);
+      cmd = parser.parse(slaManagerCliOptions, args);
     } catch (ParseException e) {
-      usage(options);
+      usage(slaManagerCliOptions);
       throw new RuntimeException("Error parsing command line options: ", e);
     }
 
@@ -222,8 +222,7 @@ public class SLAManager {
     String environ = cmd.getOptionValue("environment");
     String heronHome = cmd.getOptionValue("heron_home");
     String configPath = cmd.getOptionValue("config_path");
-    String overrideConfigFile = cmd.getOptionValue("override_config_file");
-    String releaseFile = cmd.getOptionValue("release_file");
+    topologyName = cmd.getOptionValue("topology_name");
 
     // first load the defaults, then the config from files to override it
     // next add config parameters from the command line
@@ -232,20 +231,56 @@ public class SLAManager {
     // build the final config by expanding all the variables
     Config config = Config.expand(
         Config.newBuilder()
-            .putAll(defaultConfigs(heronHome, configPath, releaseFile))
-            .putAll(overrideConfigs(overrideConfigFile))
+            .putAll(defaultConfigs(heronHome, configPath, null))
             .putAll(commandLineConfigs(cluster, role, environ, verbose))
+            .put(Keys.topologyName(), topologyName)
             .build());
 
-    LOG.fine("Static config loaded successfully ");
+    LOG.info("Static config loaded successfully ");
     LOG.fine(config.toString());
 
     SLAManager slaManager = new SLAManager(config);
-    slaManager.run();
+    slaManager.initialize();
+
+    ScheduledFuture<?> future = slaManager.start();
+    try {
+      future.get();
+    } catch (Exception e) {
+      slaManager.executor.shutdownNow();
+      throw e;
+    }
   }
 
-  private void run() {
-    System.out.println("Running the SLA manager");
-    System.out.println(config);
+  private void initialize() throws ReflectiveOperationException {
+    getTopologyFromStateManager();
+    sinkVisitor = new TrackerVisitor();
+    sinkVisitor.initialize(config, topology);
+    policy = new FailedTuplesPolicy();
+    policy.initialize(config, topology, sinkVisitor);
+  }
+
+  private void getTopologyFromStateManager() throws ReflectiveOperationException {
+    LOG.log(Level.INFO, "Fetching topology from state manager: {0}", topologyName);
+    String statemgrClass = Context.stateManagerClass(config);
+    IStateManager statemgr = ReflectionUtils.newInstance(statemgrClass);
+    statemgr.initialize(config);
+    SchedulerStateManagerAdaptor adaptor = new SchedulerStateManagerAdaptor(statemgr, 5000);
+    topology = adaptor.getTopology(topologyName);
+    if (topology == null) {
+      throw new RuntimeException(String.format("Failed to fetch topology: %s", topologyName));
+    }
+  }
+
+  private ScheduledFuture<?> start() {
+    executor = Executors.newScheduledThreadPool(1);
+    ScheduledFuture<?> future = executor.scheduleWithFixedDelay(new Runnable() {
+      @Override
+      public void run() {
+        LOG.info("Executing SLA Policy: " + policy.getClass().getSimpleName());
+        policy.execute();
+      }
+    }, 1, 15, TimeUnit.SECONDS);
+
+    return future;
   }
 }
