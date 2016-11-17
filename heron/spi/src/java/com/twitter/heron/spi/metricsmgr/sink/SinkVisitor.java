@@ -36,7 +36,7 @@ public interface SinkVisitor extends AutoCloseable {
    *
    * @return The metric name
    */
-  Iterable<MetricsInfo> getNextMetric(String metric);
+  Iterable<MetricsInfo> getNextMetric(String metric, String... component);
 
   /**
    * Close the sink visitor

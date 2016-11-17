@@ -49,11 +49,11 @@ public class TrackerVisitor implements SinkVisitor {
   }
 
   @Override
-  public Iterable<MetricsInfo> getNextMetric(String metric) {
+  public Iterable<MetricsInfo> getNextMetric(String metric, String... component) {
     List<MetricsInfo> metricsInfo = new ArrayList<MetricsInfo>();
-    for (int j = 0; j < this.bolts.size(); j++) {
+    for (int j = 0; j < component.length; j++) {
       target = target.queryParam("metricname", metric)
-          .queryParam("component", this.bolts.get(j).getComp().getName());
+          .queryParam("component", component[j]);
       Response r = target.request(MediaType.APPLICATION_JSON_TYPE).get();
       TrackerOutput result = r.readEntity(TrackerOutput.class);
       List<MetricsInfo> tmp = convert(result, metric);

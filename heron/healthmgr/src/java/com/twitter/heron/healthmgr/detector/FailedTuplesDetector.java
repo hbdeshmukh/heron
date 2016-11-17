@@ -15,6 +15,7 @@
 package com.twitter.heron.healthmgr.detector;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.twitter.heron.api.generated.TopologyAPI;
@@ -38,7 +39,13 @@ public class FailedTuplesDetector implements IDetector<FailedTuplesResult> {
 
   @Override
   public Diagnosis<FailedTuplesResult> detect(TopologyAPI.Topology topology) {
-    Iterable<MetricsInfo> metricsResults = visitor.getNextMetric("__fail-count/default");
+    List<TopologyAPI.Bolt> bolts = topology.getBoltsList();
+    String[] boltNames = new String[bolts.size()];
+    for(int i = 0; i < boltNames.length; i++){
+      boltNames[i] = bolts.get(i).getComp().getName();
+    }
+    Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric("__fail-count/default",
+        boltNames);
     Set<FailedTuplesResult> instanceInfo = new HashSet<FailedTuplesResult>();
     for (MetricsInfo metricsInfo : metricsResults) {
       String[] parts = metricsInfo.getName().split("_");

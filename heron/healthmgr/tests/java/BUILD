@@ -1,4 +1,5 @@
 
+load("/tools/rules/java_tests", "java_tests")
 load("/tools/rules/heron_deps", "heron_java_proto_files")
 
 healthmgr_deps_files = [
@@ -22,52 +23,42 @@ healthmgr_deps_files = [
               "@org_glassfish_jersey_media_jersey_media_json_jackson//jar",
               "//heron/proto:proto_topology_java",
               "//heron/healthmgr/src/java:healthmgr-java",
+              "//heron/spi/src/java:packing-spi-java",
+              "//heron/proto:proto_packing_plan_java",
+              "//heron/spi/src/java:statemgr-spi-java",
+              "//heron/instance/src/java:instance-java",
 ]
 
 test_deps_files = [
     "//third_party/java:junit4",
     "//heron/spi/src/java:utils-spi-java",
+     "@com_google_guava_guava//jar",
+     "//third_party/java:powermock",
+     "//third_party/java:mockito",
   ]
 
 
 java_library(
-    name = "healthmgr-utils",
-    srcs = glob(
-        ["**/*.java"]
-    ),
+    name = "healthmgr-tests",
+    srcs = glob(["**/*.java"]),
     deps = healthmgr_deps_files +\
-           test_deps_files,
+           test_deps_files
+           + [
+               "//heron/statemgrs/src/java:null-statemgr-java",
+               "//heron/schedulers/src/java:null-scheduler-java",
+               "//heron/packing/src/java:roundrobin-packing",
+             ]
 )
 
-java_test(
-    name = "FailedTuplesDetectorTest",
-    srcs = glob(
-        ["**/detector/FailedTuplesDetectorTest.java"]
-    ),
-    deps = healthmgr_deps_files + \
-           test_deps_files,
-    size = "small",
+java_tests(
+   test_classes = [
+       "com.twitter.heron.healthmgr.detector.BackPressureDetectorTest",
+       "com.twitter.heron.healthmgr.resolver.BackPressureResolverTest",
+       "com.twitter.heron.healthmgr.resolver.FailedTuplesResolverTest",
+       "com.twitter.heron.healthmgr.detector.FailedTuplesDetectorTest",
+       "com.twitter.heron.healthmgr.policy.FailedTuplesPolicyTest",
+     ],
+     runtime_deps = [ ":healthmgr-tests" ],
+     size = "small",
 )
-
-java_test(
-    name = "FailedTuplesResolverTest",
-    srcs = glob(
-        ["**/resolver/FailedTuplesResolverTest.java"]
-    ),
-    deps = healthmgr_deps_files + \
-           test_deps_files,
-    size = "small",
-)
-
-java_test(
-    name = "FailedTuplesPolicyTest",
-    srcs = glob(
-        ["**/policy/FailedTuplesPolicyTest.java"]
-    ),
-    deps = healthmgr_deps_files + \
-           test_deps_files,
-    size = "small",
-)
-
-
 
