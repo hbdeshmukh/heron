@@ -24,8 +24,12 @@ public class BackPressureResult {
     this.backPressureInfo = new HashMap<String, BackPressureContainer>();
   }
 
-  public HashMap<String, BackPressureContainer> getInstancesBackPressure() {
+  public HashMap<String, BackPressureContainer> getBackPressureInfo() {
     return backPressureInfo;
+  }
+
+  public boolean contains(String component){
+    return backPressureInfo.containsKey(component);
   }
 
   public void add(String component, int container, int instanceId, int backPressureValue) {
