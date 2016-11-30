@@ -15,6 +15,8 @@ package com.twitter.heron.slamgr.detector;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,13 +30,14 @@ import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
+import com.twitter.heron.spi.slamgr.ComponentBottleneck;
 import com.twitter.heron.spi.slamgr.Diagnosis;
 import com.twitter.heron.spi.slamgr.IDetector;
 import com.twitter.heron.spi.statemgr.IStateManager;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 import com.twitter.heron.spi.utils.ReflectionUtils;
 
-public class BackPressureDetector implements IDetector<BackPressureResult> {
+public class BackPressureDetector implements IDetector<ComponentBottleneck> {
 
   private static final Logger LOG = Logger.getLogger(BackPressureDetector.class.getName());
   private SinkVisitor visitor;
@@ -56,31 +59,48 @@ public class BackPressureDetector implements IDetector<BackPressureResult> {
     return true;
   }
 
+  public String getBackPressureMetric(PackingPlan.ContainerPlan containerPlan,
+  PackingPlan.InstancePlan instancePlan){
+    String name = "container_" + containerPlan.getId()
+        + "_" + instancePlan.getComponentName()
+        + "_" + instancePlan.getTaskId();
+    Iterable<MetricsInfo> metricsResults =
+        this.visitor.getNextMetric("__time_spent_back_pressure_by_compid/" + name, "__stmgr__");
+    String[] parts = metricsResults.toString().replace("]", "").replace(" ", "").split("=");
+    return parts[1];
+  }
 
 
   @Override
-  public Diagnosis<BackPressureResult> detect(TopologyAPI.Topology topology)
+  public Diagnosis<ComponentBottleneck> detect(TopologyAPI.Topology topology)
       throws RuntimeException {
 
     PackingPlan packingPlan = getPackingPlan(topology);
-    BackPressureResult result = new BackPressureResult();
+    HashMap<String, ComponentBottleneck> results = new HashMap<>();
     for (PackingPlan.ContainerPlan containerPlan : packingPlan.getContainers()) {
       for (PackingPlan.InstancePlan instancePlan : containerPlan.getInstances()) {
-        String name = "container_" + containerPlan.getId()
-            + "_" + instancePlan.getComponentName()
-            + "_" + instancePlan.getTaskId();
-        System.out.println(name);
-        Iterable<MetricsInfo> metricsResults =
-            this.visitor.getNextMetric("__time_spent_back_pressure_by_compid/" + name, "__stmgr__");
-        String[] parts = metricsResults.toString().replace("]", "").replace(" ", "").split("=");
-        result.add(instancePlan.getComponentName(), containerPlan.getId(),
-            instancePlan.getTaskId(), Integer.parseInt(parts[1]));
-        System.out.println(result.toString());
+        String metricValue = getBackPressureMetric(containerPlan, instancePlan);
+        MetricsInfo metric = new MetricsInfo("__time_spent_back_pressure_by_compid", metricValue);
+
+        ComponentBottleneck currentBottleneck;
+        if(!results.containsKey(instancePlan.getComponentName())) {
+           currentBottleneck = new ComponentBottleneck(instancePlan.getComponentName());
+        }
+        else{
+          currentBottleneck = results.get(instancePlan.getComponentName());
+        }
+        Set<MetricsInfo> metrics = new HashSet<>();
+        metrics.add(metric);
+        currentBottleneck.add(containerPlan.getId(),
+            instancePlan.getTaskId(), metrics);
+        results.put(instancePlan.getComponentName(), currentBottleneck);
       }
     }
-    Set<BackPressureResult> diagnosis = new HashSet<BackPressureResult>();
-    diagnosis.add(result);
-    return new Diagnosis<BackPressureResult>(diagnosis);
+    Set<ComponentBottleneck> bottlenecks  = new HashSet<ComponentBottleneck>();
+    for(ComponentBottleneck bottleneck : results.values()){
+      bottlenecks.add(bottleneck);
+    }
+    return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
 
   private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {

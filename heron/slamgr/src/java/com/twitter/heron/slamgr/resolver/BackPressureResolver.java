@@ -19,12 +19,12 @@ import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.slamgr.TopologyGraph;
-import com.twitter.heron.slamgr.detector.BackPressureResult;
 import com.twitter.heron.spi.common.Config;
+import com.twitter.heron.spi.slamgr.ComponentBottleneck;
 import com.twitter.heron.spi.slamgr.Diagnosis;
 import com.twitter.heron.spi.slamgr.IResolver;
 
-public class BackPressureResolver implements IResolver<BackPressureResult> {
+public class BackPressureResolver implements IResolver<ComponentBottleneck> {
 
   private static final Logger LOG = Logger.getLogger(BackPressureResolver.class.getName());
   private ArrayList<String> topologySort = null;
@@ -35,7 +35,7 @@ public class BackPressureResolver implements IResolver<BackPressureResult> {
   }
 
   @Override
-  public Boolean resolve(Diagnosis<BackPressureResult> diagnosis, TopologyAPI.Topology topology) {
+  public Boolean resolve(Diagnosis<ComponentBottleneck> diagnosis, TopologyAPI.Topology topology) {
 
     if (topologySort == null) {
       topologySort = getTopologySort(topology);
@@ -44,13 +44,12 @@ public class BackPressureResolver implements IResolver<BackPressureResult> {
     boolean found = false;
     //is there data skew?
     //do we need autoscaling?
-    Set<BackPressureResult> summary = diagnosis.getSummary();
+   Set<ComponentBottleneck> summary = diagnosis.getSummary();
     if (summary.size() != 0) {
-      BackPressureResult result = summary.iterator().next();
       for (int i = 0; i < topologySort.size() && !found; i++) {
         String name = topologySort.get(i);
-        if (result.contains(name)) {
-          System.out.println(name + " " + result.toString());
+        if (appears(summary,name)) {
+          //System.out.println(name);
         }
       }
     }
@@ -58,6 +57,14 @@ public class BackPressureResolver implements IResolver<BackPressureResult> {
     return null;
   }
 
+  private boolean appears(Set<ComponentBottleneck> summary, String component){
+    for(ComponentBottleneck bottleneck: summary){
+      if(bottleneck.getComponentName().equals(component)){
+        return true;
+      }
+    }
+    return false;
+  }
 
   @Override
   public void close() {

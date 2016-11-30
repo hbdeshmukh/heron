@@ -17,13 +17,12 @@ package com.twitter.heron.healthmgr.policy;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.detector.FailedTuplesDetector;
-import com.twitter.heron.healthmgr.detector.FailedTuplesResult;
 import com.twitter.heron.healthmgr.resolver.FailedTuplesResolver;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.SLAPolicy;
+import com.twitter.heron.spi.slamgr.InstanceBottleneck;
 
 public class FailedTuplesPolicy implements SLAPolicy {
 
@@ -40,7 +39,8 @@ public class FailedTuplesPolicy implements SLAPolicy {
 
   @Override
   public void execute() {
-    Diagnosis<FailedTuplesResult> diagnosis = detector.detect(topology);
+    Diagnosis<InstanceBottleneck> diagnosis = detector.detect(topology);
+
     if (diagnosis != null) {
       resolver.resolve(diagnosis, topology);
     }

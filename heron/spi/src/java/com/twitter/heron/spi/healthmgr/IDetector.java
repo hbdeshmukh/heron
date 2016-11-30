@@ -18,7 +18,7 @@ import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 
-public interface IDetector<T> extends AutoCloseable {
+public interface IDetector<T extends Bottleneck> extends AutoCloseable {
 
   /**
    * Initialize the detector with the config and a sink visitor

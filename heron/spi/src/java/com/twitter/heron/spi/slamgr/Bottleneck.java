@@ -11,24 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.spi.healthmgr;
+package com.twitter.heron.spi.slamgr;
 
-import java.util.Set;
+public class Bottleneck {
 
-import com.twitter.heron.spi.slamgr.Bottleneck;
 
-/**
- * Describes a set of problems detected by a detector
- */
-public class Diagnosis<T extends Bottleneck> {
-
-  private Set<T> summary;
-
-  public Diagnosis(Set<T> summary) {
-    this.summary = summary;
-  }
-
-  public Set<T> getSummary() {
-    return summary;
-  }
 }

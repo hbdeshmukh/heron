@@ -40,6 +40,7 @@ import com.twitter.heron.spi.common.Keys;
 import com.twitter.heron.spi.packing.IPacking;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoSerializer;
+import com.twitter.heron.spi.slamgr.ComponentBottleneck;
 import com.twitter.heron.spi.slamgr.Diagnosis;
 import com.twitter.heron.spi.statemgr.IStateManager;
 import com.twitter.heron.spi.utils.ReflectionUtils;
@@ -138,8 +139,8 @@ public class BackPressureResolverTest {
     BackPressureDetector detector = new BackPressureDetector();
     detector.initialize(config, visitor);
 
-    Diagnosis<BackPressureResult> result = detector.detect(topology);
-    Assert.assertEquals(1, result.getSummary().size());
+    Diagnosis<ComponentBottleneck> result = detector.detect(topology);
+    Assert.assertEquals(2, result.getSummary().size());
 
     BackPressureResolver resolver = new BackPressureResolver();
     resolver.initialize(null);
