@@ -16,20 +16,21 @@ package com.twitter.heron.spi.slamgr;
 
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 
 public class ComponentBottleneck extends Bottleneck {
   String componentName;
-  ArrayList<InstanceInfo> instances;
+  ArrayList<InstanceBottleneck> instances;
 
   public ComponentBottleneck(String componentName) {
     this.componentName = componentName;
-    this.instances = new ArrayList<InstanceInfo>();
+    this.instances = new ArrayList<InstanceBottleneck>();
   }
 
   public void add(int containerId, int instanceId, Set<MetricsInfo> metrics) {
-    instances.add(new InstanceInfo(containerId, instanceId, metrics));
+    instances.add(new InstanceBottleneck(containerId, instanceId, metrics));
   }
 
   public String toString() {
@@ -40,8 +41,9 @@ public class ComponentBottleneck extends Bottleneck {
     return componentName;
   }
 
-  public ArrayList<InstanceInfo> getInstances() {
+  public ArrayList<InstanceBottleneck> getInstances() {
     return instances;
   }
+
 }
 
