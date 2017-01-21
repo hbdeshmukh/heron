@@ -21,7 +21,6 @@ import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.slamgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.spi.slamgr.ComponentBottleneck;
 import com.twitter.heron.spi.slamgr.Diagnosis;
-import com.twitter.heron.spi.slamgr.InstanceBottleneck;
 import com.twitter.heron.spi.utils.TopologyTests;
 
 public class DataSkewDetectorTest {
@@ -42,7 +41,7 @@ public class DataSkewDetectorTest {
     TrackerVisitor visitor = new TrackerVisitor();
     visitor.initialize(null, topology);
 
-    DataSkewDetector detector = new DataSkewDetector();
+    DataSkewDetector detector = new DataSkewDetector(50);
     detector.initialize(null, visitor);
 
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);

@@ -17,11 +17,11 @@ package com.twitter.heron.slamgr.outlierdetection;
 public abstract class OutlierDetector {
   private double threshold;
 
-  public OutlierDetector(double threshold) {
+  public OutlierDetector(Double threshold) {
     this.threshold = threshold;
   }
 
-  public abstract void load(double[] data);
+  public abstract void load(Double[] data);
 
   public abstract int[] detectOutliers();
 
