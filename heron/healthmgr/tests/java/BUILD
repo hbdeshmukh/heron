@@ -57,7 +57,7 @@ java_tests(
        "com.twitter.heron.healthmgr.resolver.FailedTuplesResolverTest",
        "com.twitter.heron.healthmgr.detector.FailedTuplesDetectorTest",
        "com.twitter.heron.healthmgr.policy.FailedTuplesPolicyTest",
-       "com.twitter.heron.healthmgr.detector.DataSkewDetectorTest",
+       "com.twitter.heron.healthmgr.detector.ProcessingSkewDetectorTest",
      ],
      runtime_deps = [ ":healthmgr-tests" ],
      size = "small",

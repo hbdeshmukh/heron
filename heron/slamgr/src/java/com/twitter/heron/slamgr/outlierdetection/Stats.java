@@ -17,25 +17,25 @@ package com.twitter.heron.slamgr.outlierdetection;
 public class Stats {
 
   public static double median(Double[] m) {
-    int middle = m.length/2;
-    if (m.length%2 == 1) {
+    int middle = m.length / 2;
+    if (m.length % 2 == 1) {
       return m[middle];
     } else {
-      return (m[middle-1] + m[middle]) / 2.0;
+      return (m[middle - 1] + m[middle]) / 2.0;
     }
   }
 
-  public static Double[] subtract(Double[] m, Double value){
+  public static Double[] subtract(Double[] m, Double value) {
     Double[] result = new Double[m.length];
-    for(int i = 0; i < m.length; i++){
-      result[i] = Math.abs(result[i] - value);
+    for (int i = 0; i < m.length; i++) {
+      result[i] = Math.abs(m[i] - value);
     }
     return result;
   }
 
   public static Double mad(Double[] m) {
     Double median = median(m);
-    Double[] newData = subtract(m,median);
+    Double[] newData = subtract(m, median);
     return median(newData);
   }
 }

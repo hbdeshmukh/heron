@@ -23,7 +23,7 @@ import com.twitter.heron.spi.slamgr.ComponentBottleneck;
 import com.twitter.heron.spi.slamgr.Diagnosis;
 import com.twitter.heron.spi.utils.TopologyTests;
 
-public class DataSkewDetectorTest {
+public class ProcessingSkewDetectorTest {
 
   private static final String BOLT_NAME = "exclaim1";
   private static final String SPOUT_NAME = "word";
@@ -41,10 +41,10 @@ public class DataSkewDetectorTest {
     TrackerVisitor visitor = new TrackerVisitor();
     visitor.initialize(null, topology);
 
-    DataSkewDetector detector = new DataSkewDetector(50);
+    ProcessingSkewDetector detector = new ProcessingSkewDetector(50);
     detector.initialize(null, visitor);
 
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);
-    Assert.assertEquals(1, result.getSummary().size());
+    Assert.assertEquals(0, result.getSummary().size());
   }
 }

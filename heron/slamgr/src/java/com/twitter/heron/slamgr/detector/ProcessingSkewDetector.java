@@ -31,11 +31,11 @@ import com.twitter.heron.spi.slamgr.ThresholdBasedDetector;
 /**
  * Detects the instances that have data skew.
  */
-public class DataSkewDetector extends ThresholdBasedDetector<ComponentBottleneck> {
+public class ProcessingSkewDetector extends ThresholdBasedDetector<ComponentBottleneck> {
 
   private SinkVisitor visitor;
 
-  public DataSkewDetector(double threshold) {
+  public ProcessingSkewDetector(double threshold) {
     super(threshold);
   }
 
@@ -70,11 +70,11 @@ public class DataSkewDetector extends ThresholdBasedDetector<ComponentBottleneck
       data.toArray(dataPoints);
       SimpleMADOutlierDetector outlierDetector = new SimpleMADOutlierDetector(this.getThreshold());
       outlierDetector.load(dataPoints);
-      int[] outliers = outlierDetector.detectOutliers();
+      ArrayList<Integer> outliers = outlierDetector.detectOutliers();
 
       int current = 0;
-      if (outliers.length != 0) {
-        for (int j = 0; j < outliers.length; j++) {
+      if (outliers.size() != 0) {
+        for (int j = 0; j < outliers.size(); j++) {
           for (MetricsInfo metricsInfo : metricsResults) {
             if (current == j) {
               String[] parts = metricsInfo.getName().split("_");

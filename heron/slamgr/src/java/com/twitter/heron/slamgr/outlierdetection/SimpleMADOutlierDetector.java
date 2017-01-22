@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.twitter.heron.slamgr.outlierdetection;
 
+import java.util.ArrayList;
 
 public class SimpleMADOutlierDetector extends OutlierDetector {
   private Double[] dataPoints;
@@ -25,8 +26,15 @@ public class SimpleMADOutlierDetector extends OutlierDetector {
     this.dataPoints = data;
   }
 
-  public int[] detectOutliers() {
+  public ArrayList<Integer> detectOutliers() {
     Double outlierMetric = Stats.mad(dataPoints);
-    return null;
+    Double median = Stats.median(dataPoints);
+    ArrayList<Integer> outliers = new ArrayList<Integer>();
+    for(int i = 0; i < dataPoints.length; i++){
+      if(Math.abs(dataPoints[i] - median) > getThreshold() * outlierMetric ){
+        outliers.add(i);
+      }
+    }
+    return outliers;
   }
 }

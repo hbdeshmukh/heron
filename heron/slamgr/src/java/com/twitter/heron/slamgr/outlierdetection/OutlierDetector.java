@@ -14,6 +14,8 @@
 package com.twitter.heron.slamgr.outlierdetection;
 
 
+import java.util.ArrayList;
+
 public abstract class OutlierDetector {
   private double threshold;
 
@@ -23,7 +25,7 @@ public abstract class OutlierDetector {
 
   public abstract void load(Double[] data);
 
-  public abstract int[] detectOutliers();
+  public abstract ArrayList<Integer> detectOutliers();
 
   public double getThreshold() {
     return threshold;
