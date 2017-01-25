@@ -71,8 +71,7 @@ public class TrackerOutput {
       this.component = component;
     }
 
-    public Map<String, Map<String, String>> getMetrics() {
-      return metrics;
+    public Map<String, Map<String, String>> getMetrics() {return metrics;
     }
 
     public int getInterval() {

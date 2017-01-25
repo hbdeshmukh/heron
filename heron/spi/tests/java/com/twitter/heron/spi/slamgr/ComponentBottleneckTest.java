@@ -11,32 +11,30 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.spi.healthmgr;
+package com.twitter.heron.spi.slamgr;
 
 
+import java.util.HashSet;
 import java.util.Set;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 
-public class InstanceBottleneck extends Bottleneck {
-  InstanceInfo instanceData;
 
-  public InstanceBottleneck(int containerId, int instanceId, Set<MetricsInfo> metrics) {
-    this.instanceData = new InstanceInfo(containerId, instanceId, metrics);
-  }
+public class ComponentBottleneckTest {
 
-  public InstanceInfo getInstanceData() {
-    return instanceData;
-  }
+  @Test
+  public void testComponentBottleneckEquals() {
+    ComponentBottleneck bottleneck = new ComponentBottleneck("component");
+    Set<MetricsInfo> metrics = new HashSet<MetricsInfo>();
+    metrics.add(new MetricsInfo("testMetric1", "1"));
+    metrics.add(new MetricsInfo("testMetric2", "2"));
+    bottleneck.add(1, 1, metrics);
+    bottleneck.add(1, 2, metrics);
+    Assert.assertEquals(bottleneck.contains("testMetric1", "1"), true);
+    Assert.assertEquals(bottleneck.contains("testMetric1", "0"), false);
 
-  public String toString() {
-    return instanceData.toString();
-  }
-
-  public boolean contains(String metric, String value) {
-    if (instanceData.contains(metric, value)) {
-      return true;
-    }
-    return false;
   }
 }

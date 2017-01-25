@@ -14,6 +14,7 @@
 package com.twitter.heron.healthmgr.detector.outlierdetection;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class SimpleMADOutlierDetector extends OutlierDetector {
   private Double[] dataPoints;
@@ -29,6 +30,7 @@ public class SimpleMADOutlierDetector extends OutlierDetector {
   public ArrayList<Integer> detectOutliers() {
     Double outlierMetric = Stats.mad(dataPoints);
     Double median = Stats.median(dataPoints);
+    System.out.println(outlierMetric + " " + median + " " + Arrays.toString(dataPoints));
     ArrayList<Integer> outliers = new ArrayList<Integer>();
     for(int i = 0; i < dataPoints.length; i++){
       if(Math.abs(dataPoints[i] - median) > getThreshold() * outlierMetric ){

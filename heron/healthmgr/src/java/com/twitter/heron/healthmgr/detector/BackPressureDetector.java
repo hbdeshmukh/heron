@@ -34,6 +34,7 @@ import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
 public class BackPressureDetector implements IDetector<ComponentBottleneck> {
 
+  private final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private static final Logger LOG = Logger.getLogger(BackPressureDetector.class.getName());
   private SinkVisitor visitor;
   private Config runtime;
@@ -50,7 +51,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
         + "_" + instancePlan.getComponentName()
         + "_" + instancePlan.getTaskId();
     Iterable<MetricsInfo> metricsResults =
-        this.visitor.getNextMetric("__time_spent_back_pressure_by_compid/" + name, "__stmgr__");
+        this.visitor.getNextMetric(BACKPRESSURE_METRIC +"/" + name, "__stmgr__");
     String[] parts = metricsResults.toString().replace("]", "").replace(" ", "").split("=");
     return parts[1];
   }
@@ -65,7 +66,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
     for (PackingPlan.ContainerPlan containerPlan : packingPlan.getContainers()) {
       for (PackingPlan.InstancePlan instancePlan : containerPlan.getInstances()) {
         String metricValue = getBackPressureMetric(containerPlan, instancePlan);
-        MetricsInfo metric = new MetricsInfo("__time_spent_back_pressure_by_compid", metricValue);
+        MetricsInfo metric = new MetricsInfo(BACKPRESSURE_METRIC, metricValue);
 
         ComponentBottleneck currentBottleneck;
         if (!results.containsKey(instancePlan.getComponentName())) {
@@ -80,9 +81,11 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
         results.put(instancePlan.getComponentName(), currentBottleneck);
       }
     }
-    Set<ComponentBottleneck> bottlenecks = new HashSet<ComponentBottleneck>();
-    for (ComponentBottleneck bottleneck : results.values()) {
-      bottlenecks.add(bottleneck);
+    Set<ComponentBottleneck> bottlenecks  = new HashSet<ComponentBottleneck>();
+    for(ComponentBottleneck bottleneck : results.values()){
+      if(!bottleneck.contains(BACKPRESSURE_METRIC,"0")) {
+        bottlenecks.add(bottleneck);
+      }
     }
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }

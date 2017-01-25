@@ -49,4 +49,24 @@ public class MetricsInfo {
   public String toString() {
     return String.format("%s = %s", getName(), getValue());
   }
+
+  @Override
+  public boolean equals(Object other) {
+    if ((other == null) || (getClass() != other.getClass())) {
+      return false;
+    } else {
+      MetricsInfo metric = (MetricsInfo) other;
+      return name.equals(metric.getName()) && value == metric.getValue();
+    }
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int hash = 7;
+    hash = 31 * hash + name.hashCode();
+    hash = 31 * hash + value.hashCode();
+    return hash;
+  }
+
 }

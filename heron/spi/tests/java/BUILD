@@ -101,3 +101,12 @@ java_tests(
     data = glob(["**/testdata/**/*.yaml"]),
     size = "small",
 )
+
+java_test(
+    name = "ComponentBottleneckTest",
+    srcs = glob(["**/slamgr/ComponentBottleneckTest.java"]),
+    deps = util_deps_files +
+      ["//heron/spi/src/java:metricsmgr-spi-java",
+      "//heron/spi/src/java:slamgr-spi-java"],
+    size = "small",
+)

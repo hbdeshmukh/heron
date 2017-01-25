@@ -45,5 +45,13 @@ public class InstanceInfo {
     return String.format("Instance %d in container %d has metric value %s", instanceId, containerId,
         metrics.toString());
   }
+
+  public boolean contains(String metric, String value) {
+    if (metrics.contains(new MetricsInfo(metric, value))) {
+      return true;
+    }
+    return false;
+  }
+
 }
 

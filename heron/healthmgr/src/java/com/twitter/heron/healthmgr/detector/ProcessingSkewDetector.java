@@ -57,6 +57,14 @@ public class ProcessingSkewDetector extends ThresholdBasedDetector<ComponentBott
       Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric("__execute-count/default",
           component);
 
+      for (MetricsInfo metricsInfo : metricsResults) {
+        String[] parts = metricsInfo.getName().split("_");
+
+        Set<MetricsInfo> metrics = new HashSet<>();
+        metrics.add(new MetricsInfo("__execute-count/default", metricsInfo.getValue()));
+        System.out.println(component + " " + Integer.parseInt(parts[1]) + " "+
+            Integer.parseInt(parts[3]) + " " +  metrics);
+      }
       ComponentBottleneck currentBottleneck;
       currentBottleneck = new ComponentBottleneck(component);
 

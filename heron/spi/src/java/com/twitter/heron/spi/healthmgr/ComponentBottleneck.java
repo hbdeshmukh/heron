@@ -43,5 +43,13 @@ public class ComponentBottleneck extends Bottleneck {
   public ArrayList<InstanceBottleneck> getInstances() {
     return instances;
   }
+
+  public boolean contains(String metric, String value) {
+    for (InstanceBottleneck instanceBottleneck : instances) {
+      if (instanceBottleneck.contains(metric, value))
+        return true;
+    }
+    return false;
+  }
 }
 
