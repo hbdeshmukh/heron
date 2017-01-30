@@ -53,5 +53,13 @@ public class InstanceInfo {
     return false;
   }
 
+  public String getMetricValue(String metric) throws RuntimeException{
+    for(MetricsInfo currentMetric: metrics){
+      if(currentMetric.getName().equals(metric))
+        return currentMetric.getValue();
+    }
+    throw new RuntimeException("No metric with name " + metric + "was found");
+  }
+
 }
 

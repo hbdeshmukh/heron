@@ -18,6 +18,8 @@ import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 
+import java.util.Collection;
+
 
 /**
  * Accesses records from a given sink.
@@ -36,7 +38,7 @@ public interface SinkVisitor extends AutoCloseable {
    *
    * @return The metric name
    */
-  Iterable<MetricsInfo> getNextMetric(String metric, String... component);
+  Collection<MetricsInfo> getNextMetric(String metric, String... component);
 
   /**
    * Close the sink visitor

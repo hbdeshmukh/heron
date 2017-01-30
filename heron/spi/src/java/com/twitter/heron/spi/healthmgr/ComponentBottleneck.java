@@ -58,10 +58,18 @@ public class ComponentBottleneck extends Bottleneck {
       if (instanceBottleneck.contains(metric, "0"))
         count++;
     }
-    if(count == instances.size()){
+    if (count == instances.size()) {
       return false;
     }
     return true;
+  }
+
+  public Double[] getDataPoints(String metric) {
+    Double[] dataPoints = new Double[instances.size()];
+    for(int i = 0; i < instances.size(); i++){
+      dataPoints[i] = Double.parseDouble(instances.get(i).getDataPoint(metric));
+    }
+    return dataPoints;
   }
 }
 

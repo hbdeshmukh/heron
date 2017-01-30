@@ -113,6 +113,7 @@ public enum Key {
   //keys for run time config
   TOPOLOGY_CLASSPATH                  ("heron.runtime.topology.class.path"),
   SCHEDULER_STATE_MANAGER_ADAPTOR     ("heron.runtime.scheduler.state.manager.adaptor"),
+  SCHEDULER_CLIENT_INSTANCE           ("heron.runtime.scheduler.state.manager.adaptor"),
   SCHEDULER_SHUTDOWN                  ("heron.runtime.scheduler.shutdown"),
   PACKING_CLASS_INSTANCE              ("heron.runtime.packing.class.instance"),
   LAUNCHER_CLASS_INSTANCE             ("heron.runtime.launcher.class.instance"),

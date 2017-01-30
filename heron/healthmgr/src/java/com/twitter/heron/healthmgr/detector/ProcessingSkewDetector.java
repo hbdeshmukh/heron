@@ -22,18 +22,20 @@ import java.util.Set;
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.detector.outlierdetection.SimpleMADOutlierDetector;
 import com.twitter.heron.scheduler.utils.Runtime;
+import com.twitter.heron.slamgr.utils.SLAManagerUtils;
 import com.twitter.heron.spi.common.Config;
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
+import com.twitter.heron.spi.healthmgr.ThresholdBasedDetector;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
-import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
-import com.twitter.heron.spi.healthmgr.ThresholdBasedDetector;
 
 /**
  * Detects the instances that have data skew.
  */
 public class ProcessingSkewDetector extends ThresholdBasedDetector<ComponentBottleneck> {
 
+  private final String EXECUTE_COUNT_METRIC = "__execute-count/default";
   private SinkVisitor visitor;
 
   public ProcessingSkewDetector(double threshold) {
@@ -54,42 +56,24 @@ public class ProcessingSkewDetector extends ThresholdBasedDetector<ComponentBott
 
     for (int i = 0; i < boltNames.length; i++) {
       String component = bolts.get(i).getComp().getName();
-      Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric("__execute-count/default",
+      Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(EXECUTE_COUNT_METRIC,
           component);
 
-      for (MetricsInfo metricsInfo : metricsResults) {
-        String[] parts = metricsInfo.getName().split("_");
-
-        Set<MetricsInfo> metrics = new HashSet<>();
-        metrics.add(new MetricsInfo("__execute-count/default", metricsInfo.getValue()));
-        System.out.println(component + " " + Integer.parseInt(parts[1]) + " "+
-            Integer.parseInt(parts[3]) + " " +  metrics);
-      }
-      ComponentBottleneck currentBottleneck;
-      currentBottleneck = new ComponentBottleneck(component);
-
-      ArrayList<Double> data = new ArrayList<>();
-      for (MetricsInfo metricsInfo : metricsResults) {
-        data.add(Double.parseDouble(metricsInfo.getValue()));
-      }
-
-      //detect outliers for each bolt
-      Double[] dataPoints = new Double[data.size()];
-      data.toArray(dataPoints);
+      //detect outliers
+      Double[] dataPoints = SLAManagerUtils.getDoubleDataPoints(metricsResults);
       SimpleMADOutlierDetector outlierDetector = new SimpleMADOutlierDetector(this.getThreshold());
-      outlierDetector.load(dataPoints);
-      ArrayList<Integer> outliers = outlierDetector.detectOutliers();
+      ArrayList<Integer> outliers = outlierDetector.detectOutliers(dataPoints);
 
-      int current = 0;
       if (outliers.size() != 0) {
+        ComponentBottleneck currentBottleneck;
+        currentBottleneck = new ComponentBottleneck(component);
         for (int j = 0; j < outliers.size(); j++) {
+          int current = 0;
           for (MetricsInfo metricsInfo : metricsResults) {
-            if (current == j) {
-              String[] parts = metricsInfo.getName().split("_");
-              Set<MetricsInfo> metrics = new HashSet<>();
-              metrics.add(new MetricsInfo("__execute-count/default", metricsInfo.getValue()));
-              currentBottleneck.add(Integer.parseInt(parts[1]),
-                  Integer.parseInt(parts[3]), metrics);
+            //System.out.println(current + " " + j + outliers.get(j));
+            if (current == outliers.get(j)) {
+              SLAManagerUtils.updateComponentBottleneck(currentBottleneck, EXECUTE_COUNT_METRIC,
+                  metricsInfo);
             }
             current++;
           }
@@ -98,11 +82,10 @@ public class ProcessingSkewDetector extends ThresholdBasedDetector<ComponentBott
       }
 
     }
-    // for (ComponentBottleneck s : bottlenecks) {
-    //   System.out.println(s.toString());
-    // }
+
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
+
 
   @Override
   public void close() {

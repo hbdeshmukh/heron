@@ -14,15 +14,12 @@
 // limitations under the License.
 package com.twitter.heron.healthmgr.resolver;
 
+import com.amazonaws.services.s3.internal.Constants;
 import com.google.common.util.concurrent.SettableFuture;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.api.topology.TopologyBuilder;
@@ -30,8 +27,11 @@ import com.twitter.heron.healthmgr.detector.BackPressureDetector;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.healthmgr.utils.TestBolt;
 import com.twitter.heron.healthmgr.utils.TestSpout;
+import com.twitter.heron.packing.roundrobin.ResourceCompliantRRPacking;
 import com.twitter.heron.packing.roundrobin.RoundRobinPacking;
 import com.twitter.heron.proto.system.PackingPlans;
+import com.twitter.heron.scheduler.client.ISchedulerClient;
+import com.twitter.heron.scheduler.client.SchedulerClientFactory;
 import com.twitter.heron.spi.common.ClusterDefaults;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
@@ -41,20 +41,11 @@ import com.twitter.heron.spi.packing.IPacking;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoSerializer;
 import com.twitter.heron.spi.statemgr.IStateManager;
-import com.twitter.heron.spi.utils.ReflectionUtils;
-import com.twitter.heron.spi.utils.TopologyUtils;
+import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
+import com.twitter.heron.statemgr.localfs.LocalFileSystemStateManager;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({
-    TopologyUtils.class, ReflectionUtils.class, TopologyAPI.Topology.class})
 public class ScaleUpResolverTest {
-
-  private static final String STATE_MANAGER_CLASS = "STATE_MANAGER_CLASS";
   private IStateManager stateManager;
-  private Config config;
   private TopologyAPI.Topology topology;
 
 
@@ -111,36 +102,48 @@ public class ScaleUpResolverTest {
    */
   @Before
   public void setUp() throws Exception {
-    this.topology = getTopology("DataSkewTopology");
-    config = mock(Config.class);
-    when(config.getStringValue(Key.STATE_MANAGER_CLASS)).
-        thenReturn(STATE_MANAGER_CLASS);
-
-    // Mock objects to be verified
-    stateManager = mock(IStateManager.class);
-
-    final SettableFuture<PackingPlans.PackingPlan> future = getTestPacking(this.topology);
-    when(stateManager.getPackingPlan(null, "DataSkewTopology")).thenReturn(future);
-
-    // Mock ReflectionUtils stuff
-    PowerMockito.spy(ReflectionUtils.class);
-    PowerMockito.doReturn(stateManager).
-        when(ReflectionUtils.class, "newInstance", STATE_MANAGER_CLASS);
+    this.topology = getTopology("ds");
   }
 
   @Test
   public void testResolver() {
+    Config config = Config.newBuilder()
+        .put(Key.REPACKING_CLASS, ResourceCompliantRRPacking.class.getName())
+        .put(Key.INSTANCE_CPU, "1")
+        .put(Key.INSTANCE_RAM, 192L * Constants.MB)
+        .put(Key.INSTANCE_DISK, 1024L * Constants.MB)
+        .put(Key.STATEMGR_ROOT_PATH, "/Users/heron/.herondata/repository/state/local")
+        .put(Key.STATE_MANAGER_CLASS, LocalFileSystemStateManager.class.getName())
+        .build();
+
+    stateManager = new LocalFileSystemStateManager();
+    stateManager.initialize(config);
+    SchedulerStateManagerAdaptor adaptor =
+        new SchedulerStateManagerAdaptor(stateManager, 5000);
+
+    Config runtime = Config.newBuilder()
+        .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
+        .put(Key.TOPOLOGY_NAME, "ds")
+        .build();
+
+    ISchedulerClient schedulerClient = new SchedulerClientFactory(config, runtime).getSchedulerClient();
+
+    runtime = Config.newBuilder()
+        .putAll(runtime)
+        .put(Key.SCHEDULER_CLIENT_INSTANCE, schedulerClient)
+        .build();
+
     TrackerVisitor visitor = new TrackerVisitor();
     visitor.initialize(config, null);
 
     BackPressureDetector detector = new BackPressureDetector();
-    detector.initialize(config, null);
+    detector.initialize(config, runtime);
 
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);
     Assert.assertEquals(1, result.getSummary().size());
 
     ScaleUpResolver resolver = new ScaleUpResolver();
-    resolver.initialize(config, null);
+    resolver.initialize(config, runtime);
 
     resolver.resolve(result, topology);
   }

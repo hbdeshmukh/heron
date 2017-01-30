@@ -14,15 +14,15 @@
 
 package com.twitter.heron.scheduler.utils;
 
-import java.net.URI;
-import java.util.Properties;
-
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.scheduler.ILauncher;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
+
+import java.net.URI;
+import java.util.Properties;
 
 public final class Runtime {
 
@@ -52,6 +52,10 @@ public final class Runtime {
 
   public static SchedulerStateManagerAdaptor schedulerStateManagerAdaptor(Config runtime) {
     return (SchedulerStateManagerAdaptor) runtime.get(Key.SCHEDULER_STATE_MANAGER_ADAPTOR);
+  }
+
+  public static Object schedulerClientInstance(Config runtime) {
+    return runtime.get(Keys.schedulerClientInstance());
   }
 
   public static ILauncher launcherClassInstance(Config runtime) {

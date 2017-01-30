@@ -46,7 +46,10 @@ java_library(
            + [
                "//heron/statemgrs/src/java:null-statemgr-java",
                "//heron/schedulers/src/java:null-scheduler-java",
+               "//heron/schedulers/src/java:local-scheduler-java",
                "//heron/packing/src/java:roundrobin-packing",
+               "//heron/packing/src/java:binpacking-packing",
+               "//heron/scheduler-core/src/java:scheduler-java",
              ]
 )
 
@@ -58,6 +61,7 @@ java_tests(
        "com.twitter.heron.healthmgr.detector.FailedTuplesDetectorTest",
        "com.twitter.heron.healthmgr.policy.FailedTuplesPolicyTest",
        "com.twitter.heron.healthmgr.detector.ProcessingSkewDetectorTest",
+       "com.twitter.heron.healthmgr.policy.BackPressurePolicyTest",
      ],
      runtime_deps = [ ":healthmgr-tests" ],
      size = "small",

@@ -21,6 +21,8 @@ public class Stats {
     if (m.length % 2 == 1) {
       return m[middle];
     } else {
+      System.out.println("median " + (m[middle - 1] + m[middle]) / 2.0);
+
       return (m[middle - 1] + m[middle]) / 2.0;
     }
   }

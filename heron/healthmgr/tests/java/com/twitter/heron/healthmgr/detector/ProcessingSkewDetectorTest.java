@@ -31,14 +31,14 @@ public class ProcessingSkewDetectorTest {
   private TopologyAPI.Topology getTopology(
       int spoutParallelism, int boltParallelism,
       com.twitter.heron.api.Config topologyConfig) {
-    return TopologyTests.createTopology("wordTopology", topologyConfig, SPOUT_NAME,
+    return TopologyTests.createTopology("ds", topologyConfig, SPOUT_NAME,
         BOLT_NAME, spoutParallelism, boltParallelism);
   }
 
   @Test
   public void testDetector() {
 
-    TopologyAPI.Topology topology = getTopology(3, 3, new com.twitter.heron.api.Config());
+    TopologyAPI.Topology topology = getTopology(2, 2, new com.twitter.heron.api.Config());
     TrackerVisitor visitor = new TrackerVisitor();
     visitor.initialize(null, null);
 

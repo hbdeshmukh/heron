@@ -23,7 +23,6 @@ import com.twitter.heron.common.basics.SysUtils;
 import com.twitter.heron.proto.scheduler.Scheduler;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
-import com.twitter.heron.scheduler.client.SchedulerClientFactory;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Context;
@@ -49,7 +48,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   public void initialize(Config config, Config runtime) {
     this.config = config;
     this.runtime = runtime;
-    schedulerClient = getSchedulerClient(runtime);
+    schedulerClient = (ISchedulerClient) Runtime.schedulerClientInstance(runtime);
   }
 
   @Override
@@ -68,9 +67,8 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
     SchedulerStateManagerAdaptor manager = Runtime.schedulerStateManagerAdaptor(runtime);
     Map<String, Integer> changeRequests = new HashMap<>();
-    changeRequests.put(componentName, 1);
+    changeRequests.put(componentName, 3);
     PackingPlans.PackingPlan currentPlan = manager.getPackingPlan(topologyName);
-
 
     PackingPlans.PackingPlan proposedPlan = buildNewPackingPlan(currentPlan, changeRequests,
         topology);
@@ -97,11 +95,6 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
   @Override
   public void close() {
-
-  }
-
-  protected ISchedulerClient getSchedulerClient(Config runtime) {
-    return new SchedulerClientFactory(config, runtime).getSchedulerClient();
   }
 
   PackingPlans.PackingPlan buildNewPackingPlan(PackingPlans.PackingPlan currentProtoPlan,

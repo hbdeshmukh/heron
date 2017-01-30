@@ -12,31 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.twitter.heron.healthmgr.detector;
+package com.twitter.heron.slamgr.policy;
 
-import com.amazonaws.services.s3.internal.Constants;
 import com.google.common.util.concurrent.SettableFuture;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.twitter.heron.api.generated.TopologyAPI;
-import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
+import com.twitter.heron.api.topology.TopologyBuilder;
 import com.twitter.heron.proto.system.PackingPlans;
+import com.twitter.heron.slamgr.sinkvisitor.TrackerVisitor;
+import com.twitter.heron.slamgr.utils.TestBolt;
+import com.twitter.heron.slamgr.utils.TestSpout;
 import com.twitter.heron.slamgr.utils.TestUtils;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.common.Key;
-import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
-import com.twitter.heron.spi.healthmgr.Diagnosis;
-import com.twitter.heron.packing.roundrobin.ResourceCompliantRRPacking;
-import com.twitter.heron.scheduler.client.ISchedulerClient;
+import com.twitter.heron.spi.common.ConfigKeys;
 import com.twitter.heron.spi.statemgr.IStateManager;
-import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 import com.twitter.heron.spi.utils.ReflectionUtils;
 import com.twitter.heron.spi.utils.TopologyUtils;
 
@@ -46,52 +42,46 @@ import static org.mockito.Mockito.when;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
     TopologyUtils.class, ReflectionUtils.class, TopologyAPI.Topology.class})
-public class BackPressureDetectorTest {
-
+public class BackPressurePolicyTest {
 
   private static final String STATE_MANAGER_CLASS = "STATE_MANAGER_CLASS";
   private IStateManager stateManager;
   private Config config;
   private TopologyAPI.Topology topology;
-  private Config spyRuntime;
-
 
   /**
    * Basic setup before executing a test case
    */
   @Before
   public void setUp() throws Exception {
-    this.topology = TestUtils.getTopology("ds");
-    config = Config.newBuilder()
-        .put(Key.REPACKING_CLASS, ResourceCompliantRRPacking.class.getName())
-        .put(Key.INSTANCE_CPU, "1")
-        .put(Key.INSTANCE_RAM, 192L * Constants.MB)
-        .put(Key.INSTANCE_DISK, 1024L * Constants.MB)
-        .build();
+    this.topology = TestUtils.getTopology("DataSkewTopology");
+    config = mock(Config.class);
+    when(config.getStringValue(ConfigKeys.get("STATE_MANAGER_CLASS"))).
+        thenReturn(STATE_MANAGER_CLASS);
 
-    spyRuntime = Mockito.spy(Config.newBuilder().build());
-
-    ISchedulerClient schedulerClient = Mockito.mock(ISchedulerClient.class);
-    when(spyRuntime.get(Key.SCHEDULER_CLIENT_INSTANCE)).thenReturn(schedulerClient);
-
+    // Mock objects to be verified
     stateManager = mock(IStateManager.class);
-    SettableFuture<PackingPlans.PackingPlan> future = TestUtils.getTestPacking(this.topology);
-    when(stateManager.getPackingPlan(null, "ds")).thenReturn(future);
-    when(spyRuntime.get(Key.SCHEDULER_STATE_MANAGER_ADAPTOR))
-        .thenReturn(new SchedulerStateManagerAdaptor(stateManager, 5000));
 
+    final SettableFuture<PackingPlans.PackingPlan> future = TestUtils.getTestPacking(this.topology);
+    when(stateManager.getPackingPlan(null, "DataSkewTopology")).thenReturn(future);
+
+    // Mock ReflectionUtils stuff
+    PowerMockito.spy(ReflectionUtils.class);
+    PowerMockito.doReturn(stateManager).
+        when(ReflectionUtils.class, "newInstance", STATE_MANAGER_CLASS);
   }
 
   @Test
-  public void testDetector() {
+  public void testDetector() throws InterruptedException {
 
     TrackerVisitor visitor = new TrackerVisitor();
-    visitor.initialize(config, null);
+    visitor.initialize(null, topology);
 
-    BackPressureDetector detector = new BackPressureDetector();
-    detector.initialize(config, null);
+    BackPressurePolicy policy = new BackPressurePolicy();
+    policy.initialize(config, null, topology, visitor);
 
-    Diagnosis<ComponentBottleneck> result = detector.detect(topology);
-    Assert.assertEquals(1, result.getSummary().size());
+    for (int i = 0; i < 10; i++) {
+      policy.execute();
+    }
   }
 }
