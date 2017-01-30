@@ -52,7 +52,7 @@ public final class DataSkewTopology {
     }
     TopologyBuilder builder = new TopologyBuilder();
     builder.setSpout("word", new WordSpout(), parallelism);
-    builder.setBolt("consumer", new ConsumerBolt(), parallelism)
+    builder.setBolt("exclaim1", new ConsumerBolt(), parallelism)
         .fieldsGrouping("word", new Fields("word"));
     Config conf = new Config();
     conf.setNumStmgrs(parallelism);
@@ -61,7 +61,7 @@ public final class DataSkewTopology {
     Set config here
     */
     conf.setComponentRam("word", 2L * 1024 * 1024 * 1024);
-    conf.setComponentRam("consumer", 3L * 1024 * 1024 * 1024);
+    conf.setComponentRam("exclaim1", 3L * 1024 * 1024 * 1024);
     conf.setContainerCpuRequested(6);
 
     StormSubmitter.submitTopology(args[0], conf, builder.createTopology());

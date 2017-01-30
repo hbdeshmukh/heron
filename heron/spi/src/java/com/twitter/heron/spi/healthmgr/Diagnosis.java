@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.twitter.heron.spi.healthmgr;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -22,11 +23,18 @@ public class Diagnosis<T extends Bottleneck> {
 
   private Set<T> summary;
 
+  public Diagnosis(){
+    summary = new HashSet<>();
+  }
   public Diagnosis(Set<T> summary) {
     this.summary = summary;
   }
 
   public Set<T> getSummary() {
     return summary;
+  }
+
+  public void addToDiagnosis(T item){
+    summary.add(item);
   }
 }

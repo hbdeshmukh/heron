@@ -53,7 +53,7 @@ java_library(
 java_tests(
    test_classes = [
        "com.twitter.heron.healthmgr.detector.BackPressureDetectorTest",
-       "com.twitter.heron.healthmgr.resolver.BackPressureResolverTest",
+       "com.twitter.heron.healthmgr.resolver.ScaleUpResolverTest",
        "com.twitter.heron.healthmgr.resolver.FailedTuplesResolverTest",
        "com.twitter.heron.healthmgr.detector.FailedTuplesDetectorTest",
        "com.twitter.heron.healthmgr.policy.FailedTuplesPolicyTest",

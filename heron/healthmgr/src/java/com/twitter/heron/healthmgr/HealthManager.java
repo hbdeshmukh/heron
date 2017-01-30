@@ -35,9 +35,8 @@ import com.twitter.heron.healthmgr.policy.FailedTuplesPolicy;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.spi.common.ClusterConfig;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.common.Key;
-
 import com.twitter.heron.spi.common.Context;
+import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.healthmgr.SLAPolicy;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.statemgr.IStateManager;
@@ -51,6 +50,7 @@ import com.twitter.heron.spi.utils.ReflectionUtils;
 public class HealthManager {
   private static final Logger LOG = Logger.getLogger(HealthManager.class.getName());
   private final Config config;
+  private Config runtime;
   private SLAPolicy policy;
   private SinkVisitor sinkVisitor;
   private ScheduledExecutorService executor;
@@ -220,11 +220,11 @@ public class HealthManager {
         .putAll(commandLineConfigs(cluster, role, environ, topologyName, verbose))
         .build());
 
+
     LOG.info("Static config loaded successfully ");
     LOG.fine(config.toString());
 
     HealthManager healthManager = new HealthManager(config);
-    healthManager.initialize();
 
     LOG.info("Starting the SLA manager");
     ScheduledFuture<?> future = healthManager.start();

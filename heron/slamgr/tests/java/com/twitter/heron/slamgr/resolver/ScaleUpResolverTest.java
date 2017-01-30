@@ -52,7 +52,7 @@ import static org.mockito.Mockito.when;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
     TopologyUtils.class, ReflectionUtils.class, TopologyAPI.Topology.class})
-public class BackPressureResolverTest {
+public class ScaleUpResolverTest {
 
   private static final String STATE_MANAGER_CLASS = "STATE_MANAGER_CLASS";
   private IStateManager stateManager;
@@ -63,14 +63,14 @@ public class BackPressureResolverTest {
   public static TopologyAPI.Topology getTopology(String topologyName) {
     TopologyBuilder topologyBuilder = new TopologyBuilder();
 
-    topologyBuilder.setSpout("word", new TestSpout(), 1);
+    topologyBuilder.setSpout("word", new TestSpout(), 2);
 
     topologyBuilder.setBolt("exclaim1", new TestBolt(), 2).
         shuffleGrouping("word");
 
 
     com.twitter.heron.api.Config topologyConfig = new com.twitter.heron.api.Config();
-    topologyConfig.put(com.twitter.heron.api.Config.TOPOLOGY_STMGRS, 1);
+    topologyConfig.put(com.twitter.heron.api.Config.TOPOLOGY_STMGRS, 2);
 
     TopologyAPI.Topology topology =
         topologyBuilder.createTopology().
@@ -113,7 +113,7 @@ public class BackPressureResolverTest {
    */
   @Before
   public void setUp() throws Exception {
-    this.topology = getTopology("ExclamationTopology");
+    this.topology = getTopology("DataSkewTopology");
     config = mock(Config.class);
     when(config.getStringValue(ConfigKeys.get("STATE_MANAGER_CLASS"))).
         thenReturn(STATE_MANAGER_CLASS);
@@ -122,7 +122,7 @@ public class BackPressureResolverTest {
     stateManager = mock(IStateManager.class);
 
     final SettableFuture<PackingPlans.PackingPlan> future = getTestPacking(this.topology);
-    when(stateManager.getPackingPlan(null, "ExclamationTopology")).thenReturn(future);
+    when(stateManager.getPackingPlan(null, "DataSkewTopology")).thenReturn(future);
 
     // Mock ReflectionUtils stuff
     PowerMockito.spy(ReflectionUtils.class);
@@ -140,10 +140,10 @@ public class BackPressureResolverTest {
     detector.initialize(config, visitor);
 
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);
-    Assert.assertEquals(2, result.getSummary().size());
+    Assert.assertEquals(1, result.getSummary().size());
 
-    BackPressureResolver resolver = new BackPressureResolver();
-    resolver.initialize(null);
+    ScaleUpResolver resolver = new ScaleUpResolver();
+    resolver.initialize(config,null);
 
     resolver.resolve(result, topology);
   }

@@ -16,6 +16,7 @@ package com.twitter.heron.slamgr.detector;
 
 import com.google.common.util.concurrent.SettableFuture;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,7 +63,7 @@ public class BackPressureDetectorTest {
   public static TopologyAPI.Topology getTopology(String topologyName) {
     TopologyBuilder topologyBuilder = new TopologyBuilder();
 
-    topologyBuilder.setSpout("word", new TestSpout(), 1);
+    topologyBuilder.setSpout("word", new TestSpout(), 2);
 
     topologyBuilder.setBolt("exclaim1", new TestBolt(), 2).
         shuffleGrouping("word");
@@ -71,7 +72,7 @@ public class BackPressureDetectorTest {
         //shuffleGrouping("test-bolt");
 
     com.twitter.heron.api.Config topologyConfig = new com.twitter.heron.api.Config();
-    topologyConfig.put(com.twitter.heron.api.Config.TOPOLOGY_STMGRS, 1);
+    topologyConfig.put(com.twitter.heron.api.Config.TOPOLOGY_STMGRS, 2);
 
    /* Map<String, Integer> spouts = new HashMap<>();
     spouts.put("testSpout", 2);
@@ -126,7 +127,7 @@ public class BackPressureDetectorTest {
    */
   @Before
   public void setUp() throws Exception {
-    this.topology = getTopology("ExclamationTopology");
+    this.topology = getTopology("DataSkewTopology");
     config = mock(Config.class);
     when(config.getStringValue(ConfigKeys.get("STATE_MANAGER_CLASS"))).
         thenReturn(STATE_MANAGER_CLASS);
@@ -135,7 +136,7 @@ public class BackPressureDetectorTest {
     stateManager = mock(IStateManager.class);
 
     final SettableFuture<PackingPlans.PackingPlan> future = getTestPacking(this.topology);
-    when(stateManager.getPackingPlan(null, "ExclamationTopology")).thenReturn(future);
+    when(stateManager.getPackingPlan(null, "DataSkewTopology")).thenReturn(future);
 
     // Mock ReflectionUtils stuff
     PowerMockito.spy(ReflectionUtils.class);
@@ -153,6 +154,6 @@ public class BackPressureDetectorTest {
     detector.initialize(config, visitor);
 
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);
-    //Assert.assertEquals(2, result.getSummary().size());
+    Assert.assertEquals(1, result.getSummary().size());
   }
 }

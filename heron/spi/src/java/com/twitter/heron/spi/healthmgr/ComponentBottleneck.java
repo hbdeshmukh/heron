@@ -51,5 +51,17 @@ public class ComponentBottleneck extends Bottleneck {
     }
     return false;
   }
+
+  public boolean containsNonZero(String metric) {
+    int count = 0;
+    for (InstanceBottleneck instanceBottleneck : instances) {
+      if (instanceBottleneck.contains(metric, "0"))
+        count++;
+    }
+    if(count == instances.size()){
+      return false;
+    }
+    return true;
+  }
 }
 

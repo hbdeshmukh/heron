@@ -37,10 +37,10 @@ public class FailedTuplesPolicyTest {
 
     TopologyAPI.Topology topology = getTopology(1, 2, new com.twitter.heron.api.Config());
     TrackerVisitor visitor = new TrackerVisitor();
-    visitor.initialize(null, topology);
+    visitor.initialize(null, null);
 
     FailedTuplesPolicy policy = new FailedTuplesPolicy();
-    policy.initialize(null, null, topology);
+    policy.initialize(null, null);
 
     for (int i = 0; i < 10; i++) {
       policy.execute();

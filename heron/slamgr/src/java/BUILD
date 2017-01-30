@@ -37,6 +37,10 @@ slamgr_deps_files = [
            "@org_glassfish_hk2_external_javax_inject//jar",
            "//heron/proto:proto_packing_plan_java",
            "//heron/spi/src/java:packing-spi-java",
+           "//heron/spi/src/java:scheduler-spi-java",
+           "//heron/scheduler-core/src/java:scheduler-java",
+           "//heron/proto:proto_scheduler_java",
+
 ]
 
 java_library(

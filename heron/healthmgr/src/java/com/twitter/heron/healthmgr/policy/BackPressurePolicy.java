@@ -20,9 +20,9 @@ import java.util.Set;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.detector.BackPressureDetector;
-import com.twitter.heron.healthmgr.resolver.FailedTuplesResolver;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.slamgr.TopologyGraph;
+import com.twitter.heron.slamgr.resolver.ScaleUpResolver;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
@@ -33,7 +33,7 @@ import static com.twitter.heron.spi.healthmgr.utils.BottleneckUtils.appears;
 public class BackPressurePolicy implements SLAPolicy {
 
   private BackPressureDetector detector = new BackPressureDetector();
-  private FailedTuplesResolver resolver = new FailedTuplesResolver();
+  private ScaleUpResolver resolver = new ScaleUpResolver();
 
   private TopologyAPI.Topology topology;
   private ArrayList<String> topologySort = null;
@@ -60,15 +60,19 @@ public class BackPressurePolicy implements SLAPolicy {
       if (summary.size() != 0) {
         for (int i = 0; i < topologySort.size() && !found; i++) {
           String name = topologySort.get(i);
-          if (appears(summary, name)) {
-            System.out.println(name);
+          ComponentBottleneck current = appears(summary, name);
+          if (current != null) {
+            System.out.println("Bottleneck " + name);
+            Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
+            currentDiagnosis.addToDiagnosis(current);
+            resolver.resolve(currentDiagnosis, topology);
+            found = true;
             //data skew detector
             //slow host detector
             //network partitioning
           }
         }
       }
-      //resolver.resolve(diagnosis, topology);
     }
   }
 

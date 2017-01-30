@@ -56,7 +56,7 @@ public class MetricsInfo {
       return false;
     } else {
       MetricsInfo metric = (MetricsInfo) other;
-      return name.equals(metric.getName()) && value == metric.getValue();
+      return name.equals(metric.getName()) && value.equals(metric.getValue());
     }
   }
 
