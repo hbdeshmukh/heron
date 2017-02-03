@@ -19,9 +19,9 @@ import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 
 
 public class InstanceInfo {
-  int containerId;
-  int instanceId;
-  Set<MetricsInfo> metrics;
+  private int containerId;
+  private int instanceId;
+  private Set<MetricsInfo> metrics;
 
   public InstanceInfo(int containerId, int instanceId, Set<MetricsInfo> metricValues) {
     this.containerId = containerId;
@@ -39,6 +39,10 @@ public class InstanceInfo {
 
   public Set<MetricsInfo> getMetrics() {
     return metrics;
+  }
+
+  public void updateMetrics(Set<MetricsInfo> newMetrics){
+    metrics.addAll(newMetrics);
   }
 
   public String toString() {

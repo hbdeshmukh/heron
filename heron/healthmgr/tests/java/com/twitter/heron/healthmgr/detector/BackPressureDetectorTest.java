@@ -28,7 +28,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.proto.system.PackingPlans;
-import com.twitter.heron.slamgr.utils.TestUtils;
+import com.twitter.heron.healthmgr.utils.TestUtils;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;

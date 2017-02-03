@@ -33,13 +33,14 @@ import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 /**
  * Detects the instances that have data skew.
  */
-public class ProcessingSkewDetector extends ThresholdBasedDetector<ComponentBottleneck> {
+public class SkewDetector extends ThresholdBasedDetector<ComponentBottleneck> {
 
-  private final String EXECUTE_COUNT_METRIC = "__execute-count/default";
   private SinkVisitor visitor;
+  private String metric;
 
-  public ProcessingSkewDetector(double threshold) {
+  public SkewDetector(String metric, double threshold) {
     super(threshold);
+    this.metric = metric;
   }
 
   @Override
@@ -56,7 +57,7 @@ public class ProcessingSkewDetector extends ThresholdBasedDetector<ComponentBott
 
     for (int i = 0; i < boltNames.length; i++) {
       String component = bolts.get(i).getComp().getName();
-      Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(EXECUTE_COUNT_METRIC,
+      Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(metric,
           component);
 
       //detect outliers
@@ -72,7 +73,7 @@ public class ProcessingSkewDetector extends ThresholdBasedDetector<ComponentBott
           for (MetricsInfo metricsInfo : metricsResults) {
             //System.out.println(current + " " + j + outliers.get(j));
             if (current == outliers.get(j)) {
-              SLAManagerUtils.updateComponentBottleneck(currentBottleneck, EXECUTE_COUNT_METRIC,
+              SLAManagerUtils.updateComponentBottleneck(currentBottleneck, metric,
                   metricsInfo);
             }
             current++;

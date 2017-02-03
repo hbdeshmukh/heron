@@ -42,7 +42,7 @@ public class ProcessingSkewDetectorTest {
     TrackerVisitor visitor = new TrackerVisitor();
     visitor.initialize(null, null);
 
-    ProcessingSkewDetector detector = new ProcessingSkewDetector(50);
+    SkewDetector detector = new SkewDetector("__execute-count/default", 0);
     detector.initialize(null, null);
 
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);

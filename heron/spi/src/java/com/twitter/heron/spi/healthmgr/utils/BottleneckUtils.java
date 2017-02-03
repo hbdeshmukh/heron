@@ -31,5 +31,14 @@ public class BottleneckUtils {
     return null;
   }
 
-
+  public static void merge(Set<ComponentBottleneck> firstSummary,
+                           Set<ComponentBottleneck> secondSummary) {
+    for (ComponentBottleneck firstBottleneck : firstSummary) {
+      for (ComponentBottleneck secondBottleneck : secondSummary) {
+        if (firstBottleneck.getComponentName().equals(secondBottleneck.getComponentName())) {
+          firstBottleneck.merge(secondBottleneck);
+        }
+      }
+    }
+  }
 }

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.slamgr.utils;
+package com.twitter.heron.healthmgr.utils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,10 +19,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
-import com.twitter.heron.spi.slamgr.ComponentBottleneck;
 
 public class SLAManagerUtils {
 

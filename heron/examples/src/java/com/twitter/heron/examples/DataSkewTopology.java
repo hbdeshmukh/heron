@@ -122,11 +122,11 @@ public final class DataSkewTopology {
     @Override
     public void execute(Tuple tuple) {
       String key = tuple.getString(0);
-      try {
+      /*try {
         TimeUnit.MILLISECONDS.sleep(200);
       } catch (InterruptedException e) {
         e.printStackTrace();
-      }
+      }*/
       if (countMap.get(key) == null) {
         countMap.put(key, 1);
       } else {

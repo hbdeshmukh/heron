@@ -20,8 +20,8 @@ import java.util.Set;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 
 public class ComponentBottleneck extends Bottleneck {
-  String componentName;
-  ArrayList<InstanceBottleneck> instances;
+  private String componentName;
+  private ArrayList<InstanceBottleneck> instances;
 
   public ComponentBottleneck(String componentName) {
     this.componentName = componentName;
@@ -30,6 +30,20 @@ public class ComponentBottleneck extends Bottleneck {
 
   public void add(int containerId, int instanceId, Set<MetricsInfo> metrics) {
     instances.add(new InstanceBottleneck(containerId, instanceId, metrics));
+  }
+
+
+  public void merge(ComponentBottleneck bottleneck){
+    for(InstanceBottleneck instanceBottleneck: instances){
+      for(InstanceBottleneck newInstanceBottleneck: bottleneck.getInstances()){
+        InstanceInfo currentData = instanceBottleneck.getInstanceData();
+        InstanceInfo newData = newInstanceBottleneck.getInstanceData();
+        if(currentData.getInstanceId() == newData.getInstanceId()
+            && currentData.getContainerId() == currentData.getInstanceId()){
+          currentData.updateMetrics(newData.getMetrics());
+        }
+      }
+    }
   }
 
   public String toString() {

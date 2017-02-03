@@ -50,6 +50,8 @@ java_library(
                "//heron/packing/src/java:roundrobin-packing",
                "//heron/packing/src/java:binpacking-packing",
                "//heron/scheduler-core/src/java:scheduler-java",
+               "//heron/statemgrs/src/java:localfs-statemgr-java",
+
              ]
 )
 

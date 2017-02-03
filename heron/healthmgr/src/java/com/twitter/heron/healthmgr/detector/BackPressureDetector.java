@@ -13,7 +13,6 @@
 // limitations under the License.
 package com.twitter.heron.healthmgr.detector;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -23,12 +22,11 @@ import java.util.logging.Logger;
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.utils.Runtime;
-import com.twitter.heron.slamgr.utils.SLAManagerUtils;
+import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IDetector;
-import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;

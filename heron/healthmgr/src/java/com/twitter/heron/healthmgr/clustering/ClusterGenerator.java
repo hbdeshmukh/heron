@@ -11,21 +11,25 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.healthmgr.detector.outlierdetection;
 
+package com.twitter.heron.healthmgr.clustering;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
-public abstract class OutlierDetector {
-  private double threshold;
+public abstract class ClusterGenerator {
 
-  public OutlierDetector(Double threshold) {
-    this.threshold = threshold;
+  private int noClusters;
+
+  public ClusterGenerator() {}
+
+  public ClusterGenerator(int noClusters) {
+    this.noClusters = noClusters;
   }
 
-  public abstract ArrayList<Integer> detectOutliers(Double[] data);
+  public abstract HashMap<Double, ArrayList<Integer>> createClusters(Double[] data);
 
-  public double getThreshold() {
-    return threshold;
+  public double getNoClusters() {
+    return noClusters;
   }
 }
