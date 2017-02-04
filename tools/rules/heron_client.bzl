@@ -40,9 +40,9 @@ def heron_client_lib_scheduler_files():
         "//heron/packing/src/java:heron-binpacking-packing",
     ]
 
-def heron_client_lib_slamgr_files():
+def heron_client_lib_healthmgr_files():
     return [
-        "//heron/slamgr/src/java:heron-slamgr",
+        "//heron/healthmgr/src/java:heron-healthmgr",
     ]
 
 def heron_client_lib_packing_files():

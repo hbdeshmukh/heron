@@ -13,7 +13,7 @@ java_library(
         "**/spi/utils/**/*.java",
         "**/spi/statemgr/**/*.java",
         "**/spi/metricsmgr/**/*.java",
-        "**/spi/slamgr/**/*.java",
+        "**/spi/healthmgr/**/*.java",
     ]),
     deps = [
         "//heron/api/src/java:api-java",
@@ -49,7 +49,7 @@ utils_deps_files = \
         ":scheduler-spi-java",
         ":packing-spi-java",
         ":metricsmgr-spi-java",
-        ":slamgr-spi-java",
+        ":healthmgr-spi-java",
         "//heron/common/src/java:basics-java",
         "//heron/common/src/java:config-java",
         "//heron/api/src/java:api-java",
@@ -60,7 +60,7 @@ scheduler_deps_files = \
     heron_java_proto_files() + [
         ":common-spi-java",
         ":packing-spi-java",
-        ":slamgr-spi-java",
+        ":healthmgr-spi-java",
         "//heron/api/src/java:classification",
         "//heron/common/src/java:config-java",
         "@com_google_guava_guava//jar",
@@ -89,7 +89,7 @@ uploader_deps_files = [
     "//heron/common/src/java:config-java",
 ]
 
-slamgr_deps_files = [
+healthmgr_deps_files = [
     "//heron/api/src/java:api-java",
     ":common-spi-java",
     "//heron/api/src/java:classification",
@@ -191,11 +191,11 @@ java_library(
 )
 
 java_library(
-    name='slamgr-spi-java',
+    name='healthmgr-spi-java',
     srcs = glob(
-        ["**/spi/slamgr/**/*.java"],
+        ["**/spi/healthmgr/**/*.java"],
     ),
-    deps = slamgr_deps_files,
+    deps = healthmgr_deps_files,
 )
 
 java_library(
@@ -211,7 +211,7 @@ java_binary(
     srcs = glob([
         "**/spi/common/**/*.java",
         "**/spi/metricsmgr/**/*.java",
-        "**/spi/slamgr/**/*.java",
+        "**/spi/healthmgr/**/*.java",
         "**/spi/packing/**/*.java",
         "**/spi/scheduler/**/*.java",
         "**/spi/statemgr/**/*.java",

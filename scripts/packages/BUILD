@@ -8,7 +8,7 @@ load("/tools/rules/heron_client", "heron_client_bin_files")
 load("/tools/rules/heron_client", "heron_client_conf_files")
 load("/tools/rules/heron_client", "heron_client_lib_third_party_files")
 load("/tools/rules/heron_client", "heron_client_lib_scheduler_files")
-load("/tools/rules/heron_client", "heron_client_lib_slamgr_files")
+load("/tools/rules/heron_client", "heron_client_lib_healthmgr_files")
 load("/tools/rules/heron_client", "heron_client_lib_packing_files")
 load("/tools/rules/heron_client", "heron_client_lib_statemgr_files")
 load("/tools/rules/heron_client", "heron_client_lib_uploader_files")
@@ -150,9 +150,9 @@ pkg_tar(
 )
 
 pkg_tar(
-    name = "heron-client-lib-slamgr",
-    package_dir = "lib/slamgr",
-    files = heron_client_lib_slamgr_files(),
+    name = "heron-client-lib-healthmgr",
+    package_dir = "lib/healthmgr",
+    files = heron_client_lib_healthmgr_files(),
 )
 
 pkg_tar(
@@ -262,7 +262,7 @@ pkg_tar(
         ":heron-client-examples",
         ":heron-client-lib-third_party",
         ":heron-client-lib-scheduler",
-        ":heron-client-lib-slamgr",
+        ":heron-client-lib-healthmgr",
         ":heron-client-lib-packing",
         ":heron-client-lib-statemgr",
         ":heron-client-lib-uploader",
