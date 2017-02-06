@@ -1,18 +1,18 @@
-//  Copyright 2016 Twitter. All rights reserved.
+// Copyright 2016 Twitter. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//  http://www.apache.org/licenses/LICENSE-2.0
+//    http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-package com.twitter.heron.slamgr.detector;
+package com.twitter.heron.healthmgr.detector;
 
 import com.google.common.util.concurrent.SettableFuture;
 
@@ -26,21 +26,19 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.api.topology.TopologyBuilder;
-import com.twitter.heron.healthmgr.detector.BackPressureDetector;
+import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
+import com.twitter.heron.healthmgr.utils.TestBolt;
+import com.twitter.heron.healthmgr.utils.TestSpout;
 import com.twitter.heron.packing.roundrobin.RoundRobinPacking;
 import com.twitter.heron.proto.system.PackingPlans;
-import com.twitter.heron.slamgr.sinkvisitor.TrackerVisitor;
-import com.twitter.heron.slamgr.utils.TestBolt;
-import com.twitter.heron.slamgr.utils.TestSpout;
 import com.twitter.heron.spi.common.ClusterDefaults;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.common.ConfigKeys;
-import com.twitter.heron.spi.common.Keys;
+import com.twitter.heron.spi.common.Key;
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
+import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.packing.IPacking;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoSerializer;
-import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
-import com.twitter.heron.spi.slamgr.Diagnosis;
 import com.twitter.heron.spi.statemgr.IStateManager;
 import com.twitter.heron.spi.utils.ReflectionUtils;
 import com.twitter.heron.spi.utils.TopologyUtils;
@@ -69,7 +67,7 @@ public class BackPressureDetectorTest {
         shuffleGrouping("word");
 
     //topologyBuilder.setBolt("test-bolt2", new TestBolt(), 3).
-        //shuffleGrouping("test-bolt");
+    //shuffleGrouping("test-bolt");
 
     com.twitter.heron.api.Config topologyConfig = new com.twitter.heron.api.Config();
     topologyConfig.put(com.twitter.heron.api.Config.TOPOLOGY_STMGRS, 2);
@@ -98,8 +96,8 @@ public class BackPressureDetectorTest {
   public static PackingPlan getPackingPlan(TopologyAPI.Topology topology, IPacking packing) {
 
     Config config = Config.newBuilder()
-        .put(Keys.topologyId(), topology.getId())
-        .put(Keys.topologyName(), topology.getName())
+        .put(Key.TOPOLOGY_ID, topology.getId())
+        .put(Key.TOPOLOGY_NAME, topology.getName())
         .putAll(ClusterDefaults.getDefaults())
         .build();
 
@@ -129,8 +127,7 @@ public class BackPressureDetectorTest {
   public void setUp() throws Exception {
     this.topology = getTopology("DataSkewTopology");
     config = mock(Config.class);
-    when(config.getStringValue(ConfigKeys.get("STATE_MANAGER_CLASS"))).
-        thenReturn(STATE_MANAGER_CLASS);
+    when(config.getStringValue(Key.STATE_MANAGER_CLASS)).thenReturn(STATE_MANAGER_CLASS);
 
     // Mock objects to be verified
     stateManager = mock(IStateManager.class);
@@ -148,10 +145,10 @@ public class BackPressureDetectorTest {
   public void testDetector() {
 
     TrackerVisitor visitor = new TrackerVisitor();
-    visitor.initialize(config, topology);
+    visitor.initialize(config, null);
 
     BackPressureDetector detector = new BackPressureDetector();
-    detector.initialize(config, visitor);
+    detector.initialize(config, null);
 
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);
     Assert.assertEquals(1, result.getSummary().size());

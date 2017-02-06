@@ -4,14 +4,17 @@ package(default_visibility = ["//visibility:public"])
 
 healthmgr_deps_files = [
     "//heron/api/src/java:api-java",
+    "//heron/common/src/java:common-java",
     "//heron/spi/src/java:common-spi-java",
     "//heron/spi/src/java:healthmgr-spi-java",
+    "//heron/spi/src/java:packing-spi-java",
     "//heron/spi/src/java:statemgr-spi-java",
     "//heron/spi/src/java:utils-spi-java",
     "//heron/spi/src/java:metricsmgr-spi-java",
-    "//heron/common/src/java:common-java",
     "//heron/proto:proto_common_java",
     "//heron/proto:proto_metrics_java",
+    "//heron/proto:proto_packing_plan_java",
+    "//heron/proto:proto_scheduler_java",
     "//heron/proto:proto_tmaster_java",
     "//heron/proto:proto_topology_java",
     "//heron/metricsmgr/src/thrift:thrift_scribe_java",

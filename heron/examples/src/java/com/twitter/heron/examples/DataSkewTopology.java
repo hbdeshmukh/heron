@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import com.twitter.heron.common.basics.ByteAmount;
+
 import backtype.storm.Config;
 import backtype.storm.StormSubmitter;
 import backtype.storm.generated.AlreadyAliveException;
@@ -57,11 +59,8 @@ public final class DataSkewTopology {
     Config conf = new Config();
     conf.setNumStmgrs(parallelism);
 
-    /*
-    Set config here
-    */
-    conf.setComponentRam("word", 2L * 1024 * 1024 * 1024);
-    conf.setComponentRam("exclaim1", 3L * 1024 * 1024 * 1024);
+    conf.setComponentRam("word", ByteAmount.fromBytes(2L * 1024 * 1024 * 1024));
+    conf.setComponentRam("exclaim1", ByteAmount.fromBytes(3L * 1024 * 1024 * 1024));
     conf.setContainerCpuRequested(6);
 
     StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
@@ -72,14 +71,8 @@ public final class DataSkewTopology {
    */
   public static class WordSpout extends BaseRichSpout {
     private static final long serialVersionUID = 4322775001819135036L;
-
     private static final int ARRAY_LENGTH = 2;
-    private static final int WORD_LENGTH = 10;
-
     private final String[] words = new String[ARRAY_LENGTH];
-
-    private final Random rnd = new Random(31);
-
     private SpoutOutputCollector collector;
 
 
