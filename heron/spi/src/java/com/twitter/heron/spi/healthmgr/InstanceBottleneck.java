@@ -11,21 +11,25 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.spi.slamgr.utils;
+package com.twitter.heron.spi.healthmgr;
 
 
 import java.util.Set;
 
-import com.twitter.heron.spi.slamgr.ComponentBottleneck;
+import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 
-public class BottleneckUtils {
+public class InstanceBottleneck extends Bottleneck {
+  InstanceInfo instanceData;
 
-  public static boolean appears(Set<ComponentBottleneck> summary, String component) {
-    for (ComponentBottleneck bottleneck : summary) {
-      if (bottleneck.getComponentName().equals(component)) {
-        return true;
-      }
-    }
-    return false;
+  public InstanceBottleneck(int containerId, int instanceId, Set<MetricsInfo> metrics) {
+    this.instanceData = new InstanceInfo(containerId, instanceId, metrics);
+  }
+
+  public InstanceInfo getInstanceData() {
+    return instanceData;
+  }
+
+  public String toString() {
+    return instanceData.toString();
   }
 }

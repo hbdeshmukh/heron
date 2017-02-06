@@ -18,8 +18,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.healthmgr.detector.ProcessingSkewDetector;
 import com.twitter.heron.slamgr.sinkvisitor.TrackerVisitor;
-import com.twitter.heron.spi.slamgr.ComponentBottleneck;
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.slamgr.Diagnosis;
 import com.twitter.heron.spi.utils.TopologyTests;
 

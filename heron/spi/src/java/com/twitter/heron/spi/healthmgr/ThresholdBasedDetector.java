@@ -11,9 +11,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.spi.slamgr;
-
-public class Bottleneck {
+package com.twitter.heron.spi.healthmgr;
 
 
+public abstract class ThresholdBasedDetector<T extends  Bottleneck> implements IDetector<T>{
+  double threshold;
+
+  public ThresholdBasedDetector(double threshold){
+    this.threshold = threshold;
+  }
+
+  public double getThreshold(){
+    return threshold;
+  }
 }

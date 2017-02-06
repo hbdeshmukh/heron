@@ -11,56 +11,41 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.slamgr.detector;
+package com.twitter.heron.healthmgr.detector;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.proto.system.PackingPlans;
-import com.twitter.heron.slamgr.TopologyGraph;
+import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.common.Context;
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
+import com.twitter.heron.spi.healthmgr.Diagnosis;
+import com.twitter.heron.spi.healthmgr.IDetector;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
-import com.twitter.heron.spi.slamgr.ComponentBottleneck;
-import com.twitter.heron.spi.slamgr.Diagnosis;
-import com.twitter.heron.spi.slamgr.IDetector;
-import com.twitter.heron.spi.statemgr.IStateManager;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
-import com.twitter.heron.spi.utils.ReflectionUtils;
 
 public class BackPressureDetector implements IDetector<ComponentBottleneck> {
 
   private static final Logger LOG = Logger.getLogger(BackPressureDetector.class.getName());
   private SinkVisitor visitor;
-  private IStateManager statemgr;
+  private Config runtime;
 
   @Override
-  public boolean initialize(Config config, SinkVisitor sVisitor) {
-    this.visitor = sVisitor;
-    String statemgrClass = Context.stateManagerClass(config);
-    try {
-      // create an instance of state manager
-      statemgr = ReflectionUtils.newInstance(statemgrClass);
-      // initialize the state manager
-      statemgr.initialize(config);
-    } catch (IllegalAccessException | InstantiationException | ClassNotFoundException e) {
-      LOG.log(Level.SEVERE, "Failed to instantiate instances", e);
-      return false;
-    }
-    return true;
+  public void initialize(Config config, Config runtime) {
+    this.runtime = runtime;
+    this.visitor = Runtime.metricsReader(runtime);
   }
 
   public String getBackPressureMetric(PackingPlan.ContainerPlan containerPlan,
-  PackingPlan.InstancePlan instancePlan){
+                                      PackingPlan.InstancePlan instancePlan) {
     String name = "container_" + containerPlan.getId()
         + "_" + instancePlan.getComponentName()
         + "_" + instancePlan.getTaskId();
@@ -83,10 +68,9 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
         MetricsInfo metric = new MetricsInfo("__time_spent_back_pressure_by_compid", metricValue);
 
         ComponentBottleneck currentBottleneck;
-        if(!results.containsKey(instancePlan.getComponentName())) {
-           currentBottleneck = new ComponentBottleneck(instancePlan.getComponentName());
-        }
-        else{
+        if (!results.containsKey(instancePlan.getComponentName())) {
+          currentBottleneck = new ComponentBottleneck(instancePlan.getComponentName());
+        } else {
           currentBottleneck = results.get(instancePlan.getComponentName());
         }
         Set<MetricsInfo> metrics = new HashSet<>();
@@ -96,15 +80,15 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
         results.put(instancePlan.getComponentName(), currentBottleneck);
       }
     }
-    Set<ComponentBottleneck> bottlenecks  = new HashSet<ComponentBottleneck>();
-    for(ComponentBottleneck bottleneck : results.values()){
+    Set<ComponentBottleneck> bottlenecks = new HashSet<ComponentBottleneck>();
+    for (ComponentBottleneck bottleneck : results.values()) {
       bottlenecks.add(bottleneck);
     }
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
 
   private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {
-    SchedulerStateManagerAdaptor adaptor = new SchedulerStateManagerAdaptor(statemgr, 5000);
+    SchedulerStateManagerAdaptor adaptor = Runtime.schedulerStateManagerAdaptor(runtime);
 
     // get a packed plan and schedule it
     PackingPlans.PackingPlan serializedPackingPlan = adaptor.getPackingPlan(topology.getName());

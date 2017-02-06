@@ -25,7 +25,7 @@ import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IDetector;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
-import com.twitter.heron.spi.slamgr.InstanceBottleneck;
+import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 
 /**
  * Detects the instances that have failed tuples.

@@ -11,12 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.spi.slamgr;
+package com.twitter.heron.spi.healthmgr;
 
 
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 
@@ -26,7 +25,7 @@ public class ComponentBottleneck extends Bottleneck {
 
   public ComponentBottleneck(String componentName) {
     this.componentName = componentName;
-    this.instances = new ArrayList<InstanceBottleneck>();
+    this.instances = new ArrayList<>();
   }
 
   public void add(int containerId, int instanceId, Set<MetricsInfo> metrics) {
@@ -44,6 +43,5 @@ public class ComponentBottleneck extends Bottleneck {
   public ArrayList<InstanceBottleneck> getInstances() {
     return instances;
   }
-
 }
 

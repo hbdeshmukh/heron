@@ -11,25 +11,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.spi.slamgr;
+package com.twitter.heron.healthmgr.detector.outlierdetection;
 
 
-import java.util.Set;
+import java.util.ArrayList;
 
-import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
+public abstract class OutlierDetector {
+  private double threshold;
 
-public class InstanceBottleneck extends Bottleneck {
-  InstanceInfo instanceData;
-
-  public InstanceBottleneck(int containerId, int instanceId, Set<MetricsInfo> metrics) {
-    this.instanceData = new InstanceInfo(containerId, instanceId, metrics);
+  public OutlierDetector(Double threshold) {
+    this.threshold = threshold;
   }
 
-  public InstanceInfo getInstanceData() {
-    return instanceData;
-  }
+  public abstract void load(Double[] data);
 
-  public String toString() {
-    return instanceData.toString();
+  public abstract ArrayList<Integer> detectOutliers();
+
+  public double getThreshold() {
+    return threshold;
   }
 }

@@ -11,27 +11,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.twitter.heron.slamgr.resolver;
+package com.twitter.heron.healthmgr.resolver;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
-import com.twitter.heron.slamgr.TopologyGraph;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.slamgr.ComponentBottleneck;
-import com.twitter.heron.spi.slamgr.Diagnosis;
-import com.twitter.heron.spi.slamgr.IResolver;
-
-import static com.twitter.heron.spi.slamgr.utils.BottleneckUtils.appears;
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
+import com.twitter.heron.spi.healthmgr.Diagnosis;
+import com.twitter.heron.spi.healthmgr.IResolver;
 
 public class BackPressureResolver implements IResolver<ComponentBottleneck> {
 
   private static final Logger LOG = Logger.getLogger(BackPressureResolver.class.getName());
 
   @Override
-  public void initialize(Config config) {
+  public void initialize(Config config, Config runtime) {
 
   }
 

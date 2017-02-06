@@ -15,7 +15,6 @@ package com.twitter.heron.spi.healthmgr;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.slamgr.Bottleneck;
 
 public interface IResolver<T extends Bottleneck> extends AutoCloseable {
 

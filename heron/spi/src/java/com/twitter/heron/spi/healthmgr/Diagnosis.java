@@ -15,8 +15,6 @@ package com.twitter.heron.spi.healthmgr;
 
 import java.util.Set;
 
-import com.twitter.heron.spi.slamgr.Bottleneck;
-
 /**
  * Describes a set of problems detected by a detector
  */

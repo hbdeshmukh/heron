@@ -20,7 +20,7 @@ import org.junit.Test;
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
-import com.twitter.heron.spi.slamgr.InstanceBottleneck;
+import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 import com.twitter.heron.spi.utils.TopologyTests;
 
 public class FailedTuplesDetectorTest {

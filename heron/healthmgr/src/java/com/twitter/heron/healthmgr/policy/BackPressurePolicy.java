@@ -1,36 +1,34 @@
-//  Copyright 2017 Twitter. All rights reserved.
+// Copyright 2016 Twitter. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//  http://www.apache.org/licenses/LICENSE-2.0
+//    http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 
-package com.twitter.heron.slamgr.policy;
+package com.twitter.heron.healthmgr.policy;
 
 import java.util.ArrayList;
 import java.util.Set;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.healthmgr.detector.BackPressureDetector;
+import com.twitter.heron.healthmgr.resolver.FailedTuplesResolver;
+import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.slamgr.TopologyGraph;
-import com.twitter.heron.slamgr.detector.BackPressureDetector;
-import com.twitter.heron.slamgr.detector.FailedTuplesDetector;
-import com.twitter.heron.slamgr.resolver.FailedTuplesResolver;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
-import com.twitter.heron.spi.slamgr.ComponentBottleneck;
-import com.twitter.heron.spi.slamgr.Diagnosis;
-import com.twitter.heron.spi.slamgr.InstanceBottleneck;
-import com.twitter.heron.spi.slamgr.SLAPolicy;
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
+import com.twitter.heron.spi.healthmgr.Diagnosis;
+import com.twitter.heron.spi.healthmgr.SLAPolicy;
 
-import static com.twitter.heron.spi.slamgr.utils.BottleneckUtils.appears;
+import static com.twitter.heron.spi.healthmgr.utils.BottleneckUtils.appears;
 
 public class BackPressurePolicy implements SLAPolicy {
 
@@ -42,11 +40,10 @@ public class BackPressurePolicy implements SLAPolicy {
 
 
   @Override
-  public void initialize(Config conf, TopologyAPI.Topology t,
-                         SinkVisitor visitor) {
-    this.topology = t;
-    detector.initialize(conf, visitor);
-    resolver.initialize(conf);
+  public void initialize(Config conf, Config runtime) {
+    this.topology = Runtime.topology(runtime);
+    detector.initialize(conf, runtime);
+    resolver.initialize(conf, runtime);
   }
 
   @Override
@@ -63,7 +60,7 @@ public class BackPressurePolicy implements SLAPolicy {
       if (summary.size() != 0) {
         for (int i = 0; i < topologySort.size() && !found; i++) {
           String name = topologySort.get(i);
-          if (appears(summary,name)) {
+          if (appears(summary, name)) {
             System.out.println(name);
             //data skew detector
             //slow host detector
