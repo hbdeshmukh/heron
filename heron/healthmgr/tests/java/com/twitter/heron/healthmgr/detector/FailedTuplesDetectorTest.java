@@ -19,6 +19,8 @@ import org.junit.Test;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
+import com.twitter.heron.spi.common.Config;
+import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 import com.twitter.heron.spi.utils.TopologyTests;
@@ -37,13 +39,20 @@ public class FailedTuplesDetectorTest {
 
   @Test
   public void testDetector() {
-
     TopologyAPI.Topology topology = getTopology(1, 2, new com.twitter.heron.api.Config());
     TrackerVisitor visitor = new TrackerVisitor();
-    visitor.initialize(null, null);
+
+    Config config = Config.newBuilder()
+        .build();
+    Config runtime = Config.newBuilder()
+        .put(Key.TOPOLOGY_DEFINITION, topology)
+        .put(Key.METRICS_READER_INSTANCE, visitor)
+        .build();
+
+    visitor.initialize(config, runtime);
 
     FailedTuplesDetector detector = new FailedTuplesDetector();
-    detector.initialize(null, null);
+    detector.initialize(config, runtime);
 
     Diagnosis<InstanceBottleneck> result = detector.detect(topology);
     Assert.assertEquals(2, result.getSummary().size());

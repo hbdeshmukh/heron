@@ -14,13 +14,12 @@
 // limitations under the License.
 package com.twitter.heron.healthmgr.resolver;
 
-import com.amazonaws.services.s3.internal.Constants;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.common.basics.ByteAmount;
 import com.twitter.heron.healthmgr.detector.BackPressureDetector;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.healthmgr.utils.TestUtils;
@@ -52,8 +51,8 @@ public class ScaleUpResolverTest {
     Config config = Config.newBuilder()
         .put(Key.REPACKING_CLASS, ResourceCompliantRRPacking.class.getName())
         .put(Key.INSTANCE_CPU, "1")
-        .put(Key.INSTANCE_RAM, 192L * Constants.MB)
-        .put(Key.INSTANCE_DISK, 1024L * Constants.MB)
+        .put(Key.INSTANCE_RAM, ByteAmount.fromMegabytes(192).asBytes())
+        .put(Key.INSTANCE_DISK, ByteAmount.fromGigabytes(1).asBytes())
         .put(Key.STATEMGR_ROOT_PATH, "/Users/heron/.herondata/repository/state/local")
         .put(Key.STATE_MANAGER_CLASS, LocalFileSystemStateManager.class.getName())
         .build();
@@ -76,7 +75,7 @@ public class ScaleUpResolverTest {
         .build();
 
     TrackerVisitor visitor = new TrackerVisitor();
-    visitor.initialize(config, null);
+    visitor.initialize(config, runtime);
 
     BackPressureDetector detector = new BackPressureDetector();
     detector.initialize(config, runtime);

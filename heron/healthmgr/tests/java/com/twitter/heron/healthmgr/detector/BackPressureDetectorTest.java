@@ -14,7 +14,6 @@
 
 package com.twitter.heron.healthmgr.detector;
 
-import com.amazonaws.services.s3.internal.Constants;
 import com.google.common.util.concurrent.SettableFuture;
 
 import org.junit.Assert;
@@ -26,6 +25,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.common.basics.ByteAmount;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.healthmgr.utils.TestUtils;
@@ -47,14 +47,10 @@ import static org.mockito.Mockito.when;
 @PrepareForTest({
     TopologyUtils.class, ReflectionUtils.class, TopologyAPI.Topology.class})
 public class BackPressureDetectorTest {
-
-
-  private static final String STATE_MANAGER_CLASS = "STATE_MANAGER_CLASS";
   private IStateManager stateManager;
   private Config config;
   private TopologyAPI.Topology topology;
   private Config spyRuntime;
-
 
   /**
    * Basic setup before executing a test case
@@ -65,8 +61,8 @@ public class BackPressureDetectorTest {
     config = Config.newBuilder()
         .put(Key.REPACKING_CLASS, ResourceCompliantRRPacking.class.getName())
         .put(Key.INSTANCE_CPU, "1")
-        .put(Key.INSTANCE_RAM, 192L * Constants.MB)
-        .put(Key.INSTANCE_DISK, 1024L * Constants.MB)
+        .put(Key.INSTANCE_RAM, ByteAmount.fromMegabytes(192).asBytes())
+        .put(Key.INSTANCE_DISK, ByteAmount.fromGigabytes(1).asBytes())
         .build();
 
     spyRuntime = Mockito.spy(Config.newBuilder().build());
@@ -86,10 +82,10 @@ public class BackPressureDetectorTest {
   public void testDetector() {
 
     TrackerVisitor visitor = new TrackerVisitor();
-    visitor.initialize(config, null);
+    visitor.initialize(config, spyRuntime);
 
     BackPressureDetector detector = new BackPressureDetector();
-    detector.initialize(config, null);
+    detector.initialize(config, spyRuntime);
 
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);
     Assert.assertEquals(1, result.getSummary().size());

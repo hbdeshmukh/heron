@@ -18,6 +18,8 @@ import org.junit.Test;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
+import com.twitter.heron.spi.common.Config;
+import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.utils.TopologyTests;
 
 public class FailedTuplesPolicyTest {
@@ -37,6 +39,15 @@ public class FailedTuplesPolicyTest {
 
     TopologyAPI.Topology topology = getTopology(1, 2, new com.twitter.heron.api.Config());
     TrackerVisitor visitor = new TrackerVisitor();
+
+    Config config = Config.newBuilder()
+        .build();
+    Config runtime = Config.newBuilder()
+        .put(Key.TOPOLOGY_DEFINITION, topology)
+        .put(Key.METRICS_READER_INSTANCE, visitor)
+        .build();
+
+    visitor.initialize(config, runtime);
     visitor.initialize(null, null);
 
     FailedTuplesPolicy policy = new FailedTuplesPolicy();

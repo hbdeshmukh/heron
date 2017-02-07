@@ -38,13 +38,11 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
   private static final Logger LOG = Logger.getLogger(BackPressureDetector.class.getName());
   private SinkVisitor visitor;
   private Config runtime;
-  private SchedulerStateManagerAdaptor adaptor;
 
   @Override
   public void initialize(Config config, Config runtime) {
     this.runtime = runtime;
     this.visitor = Runtime.metricsReader(runtime);
-    this.adaptor = Runtime.schedulerStateManagerAdaptor(runtime);
   }
 
   @Override

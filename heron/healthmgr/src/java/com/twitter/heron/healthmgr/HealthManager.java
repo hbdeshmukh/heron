@@ -50,9 +50,7 @@ import com.twitter.heron.spi.utils.ReflectionUtils;
 public class HealthManager {
   private static final Logger LOG = Logger.getLogger(HealthManager.class.getName());
   private final Config config;
-  private Config runtime;
   private SLAPolicy policy;
-  private SinkVisitor sinkVisitor;
   private ScheduledExecutorService executor;
 
   public HealthManager(Config config) {
@@ -225,6 +223,7 @@ public class HealthManager {
     LOG.fine(config.toString());
 
     HealthManager healthManager = new HealthManager(config);
+    healthManager.initialize();
 
     LOG.info("Starting the SLA manager");
     ScheduledFuture<?> future = healthManager.start();
@@ -239,20 +238,16 @@ public class HealthManager {
   private void initialize() throws ReflectiveOperationException {
     SchedulerStateManagerAdaptor adaptor = createStateMgrAdaptor();
     TopologyAPI.Topology topology = getTopology(adaptor);
+    SinkVisitor sinkVisitor = new TrackerVisitor();
 
-    Config tmpRuntime = Config.newBuilder()
+    Config runtime = Config.newBuilder()
         .put(Key.TOPOLOGY_DEFINITION, topology)
         .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
+        .put(Key.METRICS_READER_INSTANCE, sinkVisitor)
         .build();
 
     // TODO rename sinkvisitor
-    sinkVisitor = new TrackerVisitor();
-    sinkVisitor.initialize(config, tmpRuntime);
-
-    Config runtime = Config.newBuilder()
-        .putAll(tmpRuntime)
-        .put(Key.METRICS_READER_INSTANCE, sinkVisitor)
-        .build();
+    sinkVisitor.initialize(config, runtime);
 
     // TODO READ policy from yaml
     policy = new FailedTuplesPolicy();
