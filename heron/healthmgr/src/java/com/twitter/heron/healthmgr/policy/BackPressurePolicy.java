@@ -20,29 +20,38 @@ import java.util.HashMap;
 import java.util.Set;
 
 import com.twitter.heron.api.generated.TopologyAPI;
-import com.twitter.heron.healthmgr.detector.BackPressureDetector;
-import com.twitter.heron.healthmgr.detector.outlierdetection.SimpleMADOutlierDetector;
-import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.healthmgr.TopologyGraph;
-import com.twitter.heron.healthmgr.resolver.ScaleUpResolver;
 import com.twitter.heron.healthmgr.clustering.DiscreteValueClustering;
+import com.twitter.heron.healthmgr.detector.BackPressureDetector;
 import com.twitter.heron.healthmgr.detector.ReportingDetector;
+import com.twitter.heron.healthmgr.resolver.ScaleUpResolver;
+import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
+import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 import com.twitter.heron.spi.healthmgr.SLAPolicy;
 import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 
+
 public class BackPressurePolicy implements SLAPolicy {
+
+  enum Problem {
+    SLOW_INSTANCE, DATA_SKEW, LIMITED_PARALLELISM
+  }
 
   private final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private final String EXECUTION_COUNT_METRIC = "__execute-count/default";
+  private final String EMIT_COUNT_METRIC = "__emit-count/default";
 
   private BackPressureDetector backpressureDetector = new BackPressureDetector();
   private ReportingDetector executeCountDetector = new ReportingDetector(EXECUTION_COUNT_METRIC);
   private ScaleUpResolver scaleUpResolver = new ScaleUpResolver();
+  private ReportingDetector emitCountDetector = new ReportingDetector(EMIT_COUNT_METRIC);
 
   private TopologyAPI.Topology topology;
+  private TopologyGraph topologyGraph;
+
   private ArrayList<String> topologySort = null;
 
 
@@ -51,7 +60,9 @@ public class BackPressurePolicy implements SLAPolicy {
     this.topology = Runtime.topology(runtime);
     backpressureDetector.initialize(conf, runtime);
     executeCountDetector.initialize(conf, runtime);
+    emitCountDetector.initialize(conf, runtime);
     scaleUpResolver.initialize(conf, runtime);
+    this.topologyGraph = new TopologyGraph();
   }
 
   @Override
@@ -75,16 +86,20 @@ public class BackPressurePolicy implements SLAPolicy {
           String name = topologySort.get(i);
           ComponentBottleneck current = BottleneckUtils.getComponentBottleneck(backPressureSummary, name);
           if (current != null) {
-            System.out.println("Bottleneck " + name);
             Problem problem = identifyProblem(current);
-            //check is need to scaleUp
-            boolean scaleUp = needScaleUp(current, 30);
-            System.out.println("LLLL " + scaleUp);
-            if (false) {
-              Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
-              currentDiagnosis.addToDiagnosis(current);
-              scaleUpResolver.resolve(currentDiagnosis, topology);
-              found = true;
+            if (problem == Problem.LIMITED_PARALLELISM) {
+              double scaleFactor = computeScaleUpFactor(current, executeCountSummary);
+              int newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
+              System.out.println("scale factor" + scaleFactor + " " + newParallelism);
+
+              if (false) {
+                Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
+                currentDiagnosis.addToDiagnosis(current);
+                newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
+                scaleUpResolver.setParallelism(newParallelism);
+                scaleUpResolver.resolve(currentDiagnosis, topology);
+                found = true;
+              }
             }
           }
         }
@@ -92,31 +107,80 @@ public class BackPressurePolicy implements SLAPolicy {
     }
   }
 
+
+  private double computeScaleUpFactor(ComponentBottleneck current, Set<ComponentBottleneck>
+      executeCountSummary) {
+    Diagnosis<ComponentBottleneck> emitCountDiagnosis =
+        emitCountDetector.detect(topology);
+    Set<ComponentBottleneck> emitCountSummary = emitCountDiagnosis.getSummary();
+    Set<String> parentComponents = topologyGraph.getParents(current.getComponentName());
+    double emitSum = 0;
+    for (String name : parentComponents) {
+      emitSum += BottleneckUtils.computeSum(emitCountSummary, name, EMIT_COUNT_METRIC);
+    }
+    double executeCountSum = BottleneckUtils.computeSum(executeCountSummary,
+        current.getComponentName(), EXECUTION_COUNT_METRIC);
+
+    System.out.println("LLL " + emitSum + " " + executeCountSum + " " + emitSum / executeCountSum);
+    return emitSum / executeCountSum;
+  }
+
+
   private Problem identifyProblem(ComponentBottleneck current) {
     Double[] backPressureDataPoints = current.getDataPoints(BACKPRESSURE_METRIC);
     DiscreteValueClustering clustering = new DiscreteValueClustering();
-    HashMap<Double, ArrayList<Integer>> backPressureClusters =
+    HashMap<String, ArrayList<Integer>> backPressureClusters =
         clustering.createBinaryClusters(backPressureDataPoints, 0.0);
-    System.out.println("BackPressureOutliers" + backPressureClusters.toString());
 
-    Double[] executionCountDataPoints = current.getDataPoints(EXECUTION_COUNT_METRIC);
+    /*Double[] executionCountDataPoints = current.getDataPoints(EXECUTION_COUNT_METRIC);
     SimpleMADOutlierDetector executeCountOutlierDetector = new SimpleMADOutlierDetector(1.0);
     ArrayList<Integer> executeCountOutliers =
-        executeCountOutlierDetector.detectOutliers(executionCountDataPoints);
-    System.out.println("ExecuteCountOutliers" + executeCountOutliers.toString());
+        executeCountOutlierDetector.detectOutliers(executionCountDataPoints);*/
 
-    return Problem.LIMITED_PARALLELISM;
+    if (backPressureClusters.get("1.0").size() <
+        (10 * backPressureClusters.get("0.0").size()) / 100) {
+      switch (compareExecuteCounts(current)) {
+        case 0:
+          return Problem.LIMITED_PARALLELISM;
+        case -1:
+          return Problem.SLOW_INSTANCE;
+        case 1:
+          return Problem.DATA_SKEW;
+      }
+    } else {
+      return Problem.LIMITED_PARALLELISM;
+    }
+    return null;
   }
 
-  private boolean needScaleUp(ComponentBottleneck current, int threshold) {
-    Double[] dataPoints = current.getDataPoints(BACKPRESSURE_METRIC);
-    SimpleMADOutlierDetector outlierDetector = new SimpleMADOutlierDetector(1.0);
-    ArrayList<Integer> outliers = outlierDetector.detectOutliers(dataPoints);
-    System.out.println("Outliers" + outliers.toString());
-    if (outliers.size() * 100 < threshold * dataPoints.length) {
-      return true;
+  private int compareExecuteCounts(ComponentBottleneck bottleneck) {
+
+    double backPressureExecuteCounts = 0;
+    double nonBackPressureExecuteCounts = 0;
+    int noBackPressureInstances = 0;
+    for (int j = 0; j < bottleneck.getInstances().size(); j++) {
+      InstanceBottleneck currentInstance = bottleneck.getInstances().get(j);
+      if (!currentInstance.getInstanceData().getMetricValue(BACKPRESSURE_METRIC).equals("0.0")) {
+        backPressureExecuteCounts += Double.parseDouble(
+            currentInstance.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC));
+        noBackPressureInstances++;
+      } else {
+        nonBackPressureExecuteCounts += Double.parseDouble(
+            currentInstance.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC));
+      }
     }
-    return false;
+    int noNonBackPressureInstances = bottleneck.getInstances().size() - noBackPressureInstances;
+    if (backPressureExecuteCounts / noBackPressureInstances > 2 * (
+        nonBackPressureExecuteCounts / noNonBackPressureInstances)) {
+      return 1;
+    } else {
+      if (backPressureExecuteCounts / noBackPressureInstances < 0.5 * (
+          nonBackPressureExecuteCounts / noNonBackPressureInstances)) {
+        return -1;
+      } else {
+        return 0;
+      }
+    }
   }
 
   @Override
@@ -127,20 +191,17 @@ public class BackPressurePolicy implements SLAPolicy {
   }
 
   private ArrayList<String> getTopologySort(TopologyAPI.Topology topology) {
-    TopologyGraph topologyGraph = new TopologyGraph();
     for (TopologyAPI.Bolt.Builder bolt : topology.toBuilder().getBoltsBuilderList()) {
       String boltName = bolt.getComp().getName();
 
       // To get the parent's component to construct a graph of topology structure
       for (TopologyAPI.InputStream inputStream : bolt.getInputsList()) {
         String parent = inputStream.getStream().getComponentName();
-        topologyGraph.addEdge(parent, boltName);
+        this.topologyGraph.addEdge(parent, boltName);
       }
     }
-    return topologyGraph.topologicalSort();
-  }
+    TopologyGraph tmp = new TopologyGraph(this.topologyGraph);
 
-  private enum Problem {
-    SLOW_HOST, DATA_SKEW, LIMITED_PARALLELISM
+    return tmp.topologicalSort();
   }
 }

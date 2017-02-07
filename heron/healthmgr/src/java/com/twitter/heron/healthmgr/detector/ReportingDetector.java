@@ -50,23 +50,35 @@ public class ReportingDetector implements IDetector<ComponentBottleneck> {
     List<TopologyAPI.Bolt> bolts = topology.getBoltsList();
     String[] boltNames = new String[bolts.size()];
 
+    List<TopologyAPI.Spout> spouts = topology.getSpoutsList();
+    String[] spoutNames = new String[spouts.size()];
+
     Set<ComponentBottleneck> bottlenecks = new HashSet<ComponentBottleneck>();
 
     for (int i = 0; i < boltNames.length; i++) {
       String component = bolts.get(i).getComp().getName();
-      Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(metric,
-          component);
+      updateBottlenecks(bottlenecks, component);
+    }
 
-      ComponentBottleneck currentBottleneck;
-      currentBottleneck = new ComponentBottleneck(component);
-      for (MetricsInfo metricsInfo : metricsResults) {
-        SLAManagerUtils.updateComponentBottleneck(currentBottleneck, metric,
-            metricsInfo);
-      }
-      bottlenecks.add(currentBottleneck);
+    for (int i = 0; i < spoutNames.length; i++) {
+      String component = spouts.get(i).getComp().getName();
+      updateBottlenecks(bottlenecks, component);
     }
     //System.out.println(bottlenecks.toString());
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
+  }
+
+  private void updateBottlenecks(Set<ComponentBottleneck> bottlenecks, String component) {
+    Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(metric,
+        component);
+
+    ComponentBottleneck currentBottleneck;
+    currentBottleneck = new ComponentBottleneck(component);
+    for (MetricsInfo metricsInfo : metricsResults) {
+      SLAManagerUtils.updateComponentBottleneck(currentBottleneck, metric,
+          metricsInfo);
+    }
+    bottlenecks.add(currentBottleneck);
   }
 
   @Override

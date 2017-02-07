@@ -73,7 +73,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
     String topologyName = topology.getName();
     LOG.fine(String.format("updateTopologyHandler called for %s with %s",
-        topologyName, 3));
+        topologyName, newParallelism));
 
     SchedulerStateManagerAdaptor manager = Runtime.schedulerStateManagerAdaptor(runtime);
     Map<String, Integer> changeRequests = new HashMap<>();

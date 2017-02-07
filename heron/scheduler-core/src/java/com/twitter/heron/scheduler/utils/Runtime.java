@@ -55,7 +55,7 @@ public final class Runtime {
   }
 
   public static Object schedulerClientInstance(Config runtime) {
-    return runtime.get(Keys.schedulerClientInstance());
+    return runtime.get(Key.SCHEDULER_CLIENT_INSTANCE);
   }
 
   public static ILauncher launcherClassInstance(Config runtime) {

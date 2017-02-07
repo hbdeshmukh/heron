@@ -27,6 +27,12 @@ public class TopologyGraph {
   private MultiMap outEdges = new MultiMap();
   private MultiMap inEdges = new MultiMap();
 
+  public TopologyGraph(){}
+
+  public TopologyGraph(TopologyGraph graph){
+    this.inEdges.putAll(graph.inEdges);
+    this.outEdges.putAll(graph.outEdges);
+  }
   /**
    * Adds a directed edge from origin to target. The vertices are not
    * required to exist prior to this call.
@@ -112,13 +118,24 @@ public class TopologyGraph {
   }
 
   /**
-   * Returns the direct children of a vertex.
+   * Returns the children of a vertex.
    *
    * @param vertex the parent vertex
-   * @return the direct children of <code>vertex
+   * @return the direct children of the vertex
    */
   public Set<String> getChildren(String vertex) {
     return outEdges.get(vertex);
+  }
+
+
+  /**
+   * Returns the parents of a vertex.
+   *
+   * @param vertex the child vertex
+   * @return the parents of the vertex
+   */
+  public Set<String> getParents(String vertex) {
+    return inEdges.get(vertex);
   }
 
   public void removeEdge(String source, String dest) {
@@ -188,6 +205,13 @@ public class TopologyGraph {
       }
       if (val != null)
         values.add(val);
+    }
+
+    public void putAll(MultiMap map){
+      for(String key : map.keySet()){
+        Set<String> newValue = new LinkedHashSet<String>(map.get(key));
+        nMap.put(key, newValue);
+      }
     }
 
     /**

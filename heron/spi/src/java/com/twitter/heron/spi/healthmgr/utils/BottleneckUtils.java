@@ -41,4 +41,15 @@ public class BottleneckUtils {
       }
     }
   }
+
+  public static int computeSum(Set<ComponentBottleneck> summary,
+                               String componentMame, String metricName){
+    int sum = 0;
+    ComponentBottleneck tmp = getComponentBottleneck(summary, componentMame);
+    Double[] data = tmp.getDataPoints(metricName);
+    for(int i = 0; i < data.length; i++){
+      sum += data[i];
+    }
+    return sum;
+  }
 }

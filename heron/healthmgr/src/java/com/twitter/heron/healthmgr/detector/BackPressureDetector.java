@@ -56,7 +56,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
     Set<ComponentBottleneck> bottlenecks = new HashSet<ComponentBottleneck>();
     for (ComponentBottleneck bottleneck : results.values()) {
       if (bottleneck.containsNonZero(BACKPRESSURE_METRIC)) {
-        System.out.println("bottleneck name " + bottleneck.getComponentName().toString());
+        //System.out.println("bottleneck name " + bottleneck.getComponentName().toString());
         bottlenecks.add(bottleneck);
       }
     }

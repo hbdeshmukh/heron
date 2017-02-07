@@ -33,8 +33,8 @@ public class DiscreteValueClustering extends ClusterGenerator {
     this.dataPoints = data;
   }
 
-  private HashMap<Double, ArrayList<Integer>> createClusters() {
-    HashMap<Double, ArrayList<Integer>> clusters = new HashMap<Double, ArrayList<Integer>>();
+  private HashMap<String, ArrayList<Integer>> createClusters() {
+    HashMap<String, ArrayList<Integer>> clusters = new HashMap<String, ArrayList<Integer>>();
     for(int i = 0; i < dataPoints.length; i++){
       ArrayList<Integer> data;
       if(clusters.containsKey(dataPoints[i])){
@@ -44,17 +44,17 @@ public class DiscreteValueClustering extends ClusterGenerator {
         data = new ArrayList<Integer>();
       }
       data.add(i);
-      clusters.put(dataPoints[i], data);
+      clusters.put(Double.toString(dataPoints[i]), data);
     }
     return clusters;
   }
 
-  public HashMap<Double, ArrayList<Integer>> createClusters(Double[] data){
+  public HashMap<String, ArrayList<Integer>> createClusters(Double[] data){
     load(data);
     return createClusters();
   }
 
-  public HashMap<Double, ArrayList<Integer>> createBinaryClusters(Double[] data, double threshold) {
+  public HashMap<String, ArrayList<Integer>> createBinaryClusters(Double[] data, double threshold) {
     load(data);
     convertData(threshold);
     return createClusters();

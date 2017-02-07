@@ -27,7 +27,7 @@ public abstract class ClusterGenerator {
     this.noClusters = noClusters;
   }
 
-  public abstract HashMap<Double, ArrayList<Integer>> createClusters(Double[] data);
+  public abstract HashMap<String, ArrayList<Integer>> createClusters(Double[] data);
 
   public double getNoClusters() {
     return noClusters;
