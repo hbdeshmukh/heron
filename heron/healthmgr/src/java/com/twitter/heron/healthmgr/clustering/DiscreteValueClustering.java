@@ -22,7 +22,8 @@ public class DiscreteValueClustering extends ClusterGenerator {
 
   private Double[] dataPoints;
 
-  public DiscreteValueClustering() {}
+  public DiscreteValueClustering() {
+  }
 
   public DiscreteValueClustering(int noClusters) {
 
@@ -35,21 +36,20 @@ public class DiscreteValueClustering extends ClusterGenerator {
 
   private HashMap<String, ArrayList<Integer>> createClusters() {
     HashMap<String, ArrayList<Integer>> clusters = new HashMap<String, ArrayList<Integer>>();
-    for(int i = 0; i < dataPoints.length; i++){
+    for (int i = 0; i < dataPoints.length; i++) {
       ArrayList<Integer> data;
-      if(clusters.containsKey(dataPoints[i])){
+      if (clusters.containsKey(dataPoints[i])) {
         data = clusters.get(dataPoints[i]);
-      }
-      else{
-        data = new ArrayList<Integer>();
+      } else {
+        data = new ArrayList<>();
+        clusters.put(Double.toString(dataPoints[i]), data);
       }
       data.add(i);
-      clusters.put(Double.toString(dataPoints[i]), data);
     }
     return clusters;
   }
 
-  public HashMap<String, ArrayList<Integer>> createClusters(Double[] data){
+  public HashMap<String, ArrayList<Integer>> createClusters(Double[] data) {
     load(data);
     return createClusters();
   }
@@ -60,12 +60,11 @@ public class DiscreteValueClustering extends ClusterGenerator {
     return createClusters();
   }
 
-  private void convertData(double threshold){
-    for(int i = 0 ; i < dataPoints.length; i++){
-      if(dataPoints[i] > threshold){
+  private void convertData(double threshold) {
+    for (int i = 0; i < dataPoints.length; i++) {
+      if (dataPoints[i] > threshold) {
         dataPoints[i] = 1.0;
-      }
-      else{
+      } else {
         dataPoints[i] = 0.0;
       }
     }

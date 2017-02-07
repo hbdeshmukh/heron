@@ -32,6 +32,7 @@ public enum Key {
   CLUSTER_YAML                        ("heron.config.file.cluster.yaml"),
   CLIENT_YAML                         ("heron.config.file.client.yaml"),
   DEFAULTS_YAML                       ("heron.config.file.defaults.yaml"),
+  HEALTHMGR_YAML                      ("heron.config.file.healthmgr.yaml"),
   METRICS_YAML                        ("heron.config.file.metrics.yaml"),
   PACKING_YAML                        ("heron.config.file.packing.yaml"),
   SCHEDULER_YAML                      ("heron.config.file.scheduler.yaml"),
@@ -123,7 +124,11 @@ public enum Key {
   NUM_CONTAINERS                      ("heron.runtime.num.containers"),
 
   //keys for health manager
+  HEALTH_POLICY_CLASS                 ("health.policy.class"),
+  HEALTH_POLICY_INTERVAL              ("health.policy.interval.ms"),
+  HEALTH_POLICIES                     ("heron.class.health.policies"),
   METRICS_READER_INSTANCE             ("heron.runtime.metrics.reader"),
+  TRACKER_URL                         ("heron.runtime.tracker.url"),
 
   //release info
   HERON_RELEASE_PACKAGE               ("heron.release.package"),

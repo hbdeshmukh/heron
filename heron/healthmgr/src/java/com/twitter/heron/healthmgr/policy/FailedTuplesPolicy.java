@@ -22,9 +22,9 @@ import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
-import com.twitter.heron.spi.healthmgr.SLAPolicy;
+import com.twitter.heron.spi.healthmgr.HealthPolicy;
 
-public class FailedTuplesPolicy implements SLAPolicy {
+public class FailedTuplesPolicy implements HealthPolicy {
 
   private FailedTuplesDetector detector = new FailedTuplesDetector();
   private FailedTuplesResolver resolver = new FailedTuplesResolver();

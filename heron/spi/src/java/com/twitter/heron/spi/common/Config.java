@@ -15,6 +15,7 @@
 package com.twitter.heron.spi.common;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -71,6 +72,16 @@ public class Config {
 
   public String getStringValue(Key key) {
     return (String) get(key);
+  }
+
+  @SuppressWarnings("unchecked")
+  public List<String> getStringValues(Key key) {
+    return (List<String>) get(key);
+  }
+
+  @SuppressWarnings("unchecked")
+  public Map<String, String> getMapValue(String key) {
+    return (Map<String, String>) get(key);
   }
 
   public String getStringValue(Key key, String defaultValue) {

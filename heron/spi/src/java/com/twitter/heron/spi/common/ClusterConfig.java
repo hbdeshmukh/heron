@@ -60,6 +60,8 @@ public final class ClusterConfig {
             Misc.substitute(heronHome, configPath, Defaults.clientFile()))
         .put(Key.DEFAULTS_YAML,
             Misc.substitute(heronHome, configPath, Defaults.defaultsFile()))
+        .put(Key.HEALTHMGR_YAML,
+            Misc.substitute(heronHome, configPath, Defaults.healthManagerFile()))
         .put(Key.METRICS_YAML,
             Misc.substitute(heronHome, configPath, Defaults.metricsSinksFile()))
         .put(Key.PACKING_YAML,
@@ -132,6 +134,7 @@ public final class ClusterConfig {
         .putAll(sandboxConfig)
         .putAll(loadConfig(Context.clusterFile(homeConfig)))
         .putAll(loadConfig(Context.clientFile(homeConfig)))
+        .putAll(loadConfig(Context.healthManagerFile(homeConfig)))
         .putAll(loadConfig(Context.packingFile(homeConfig)))
         .putAll(loadConfig(Context.schedulerFile(homeConfig)))
         .putAll(loadConfig(Context.stateManagerFile(homeConfig)))

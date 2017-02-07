@@ -29,13 +29,12 @@ import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
+import com.twitter.heron.spi.healthmgr.HealthPolicy;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
-import com.twitter.heron.spi.healthmgr.SLAPolicy;
 import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 
 
-public class BackPressurePolicy implements SLAPolicy {
-
+public class BackPressurePolicy implements HealthPolicy {
   private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
   private static final String EMIT_COUNT_METRIC = "__emit-count/default";

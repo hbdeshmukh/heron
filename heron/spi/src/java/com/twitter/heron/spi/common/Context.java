@@ -14,6 +14,8 @@
 
 package com.twitter.heron.spi.common;
 
+import java.util.List;
+
 import com.twitter.heron.common.basics.ByteAmount;
 import com.twitter.heron.common.basics.DryRunFormatType;
 import com.twitter.heron.common.basics.PackageType;
@@ -79,6 +81,10 @@ public class Context {
     return cfg.getIntegerValue(Key.TOPOLOGY_CONTAINER_ID);
   }
 
+  public static List<String> healthPolicies(Config cfg) {
+    return cfg.getStringValues(Key.HEALTH_POLICIES);
+  }
+
   public static String uploaderClass(Config cfg) {
     return cfg.getStringValue(Key.UPLOADER_CLASS);
   }
@@ -141,6 +147,10 @@ public class Context {
 
   public static String uploaderFile(Config cfg) {
     return cfg.getStringValue(Key.UPLOADER_YAML);
+  }
+
+  public static String healthManagerFile(Config cfg) {
+    return cfg.getStringValue(Key.HEALTHMGR_YAML);
   }
 
   public static String schedulerJar(Config cfg) {

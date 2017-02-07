@@ -91,4 +91,8 @@ public final class Runtime {
   public static SinkVisitor metricsReader(Config runtime) {
     return (SinkVisitor) runtime.get(Key.METRICS_READER_INSTANCE);
   }
+
+  public static String trackerURL(Config runtime) {
+    return runtime.getStringValue(Key.TRACKER_URL);
+  }
 }

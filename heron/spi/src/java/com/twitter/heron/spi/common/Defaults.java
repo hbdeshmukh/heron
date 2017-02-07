@@ -87,6 +87,10 @@ public class Defaults {
     return ConfigDefaults.get(Key.UPLOADER_YAML);
   }
 
+  static String healthManagerFile() {
+    return ConfigDefaults.get(Key.HEALTHMGR_YAML);
+  }
+
   static String schedulerJar() {
     return ConfigDefaults.get(Key.SCHEDULER_JAR);
   }

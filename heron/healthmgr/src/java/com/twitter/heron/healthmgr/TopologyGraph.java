@@ -23,7 +23,6 @@ import java.util.Set;
 
 
 public class TopologyGraph {
-
   private MultiMap outEdges = new MultiMap();
   private MultiMap inEdges = new MultiMap();
 

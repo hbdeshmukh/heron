@@ -53,7 +53,7 @@ public class SchedulerClientFactory {
       SchedulerStateManagerAdaptor statemgr = Runtime.schedulerStateManagerAdaptor(runtime);
 
       Scheduler.SchedulerLocation schedulerLocation =
-          statemgr.getSchedulerLocation(Runtime.topologyName(runtime));
+          statemgr.getSchedulerLocation(Context.topologyName(config));
 
       if (schedulerLocation == null) {
         throw new SchedulerException("Failed to get scheduler location from state manager");

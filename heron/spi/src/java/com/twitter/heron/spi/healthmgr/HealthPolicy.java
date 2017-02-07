@@ -15,7 +15,7 @@ package com.twitter.heron.spi.healthmgr;
 
 import com.twitter.heron.spi.common.Config;
 
-public interface SLAPolicy extends AutoCloseable {
+public interface HealthPolicy extends AutoCloseable {
 
   /**
    * Initialize the SLA policy

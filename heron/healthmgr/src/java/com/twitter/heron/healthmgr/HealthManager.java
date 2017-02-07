@@ -14,8 +14,12 @@
 
 package com.twitter.heron.healthmgr;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -32,13 +36,14 @@ import org.apache.commons.cli.ParseException;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.utils.logging.LoggingHelper;
-import com.twitter.heron.healthmgr.policy.FailedTuplesPolicy;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
+import com.twitter.heron.scheduler.client.ISchedulerClient;
+import com.twitter.heron.scheduler.client.SchedulerClientFactory;
 import com.twitter.heron.spi.common.ClusterConfig;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.common.Key;
-import com.twitter.heron.spi.healthmgr.SLAPolicy;
+import com.twitter.heron.spi.healthmgr.HealthPolicy;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.statemgr.IStateManager;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
@@ -51,11 +56,14 @@ import com.twitter.heron.spi.utils.ReflectionUtils;
 public class HealthManager {
   private static final Logger LOG = Logger.getLogger(HealthManager.class.getName());
   private final Config config;
-  private SLAPolicy policy;
+  private Config runtime;
+  private HealthPolicy policy;
   private ScheduledExecutorService executor;
+  private List<String> healthPolicies;
 
-  public HealthManager(Config config) {
+  public HealthManager(Config config, Config runtime) {
     this.config = config;
+    this.runtime = runtime;
   }
 
   /**
@@ -146,6 +154,13 @@ public class HealthManager {
         .required()
         .build();
 
+    Option trackerURL = Option.builder("t")
+        .desc("Tracker url with port number")
+        .longOpt("tracker_url")
+        .hasArgs()
+        .argName("tracker url")
+        .build();
+
     Option verbose = Option.builder("v")
         .desc("Enable debug logs")
         .longOpt("verbose")
@@ -158,6 +173,7 @@ public class HealthManager {
     options.addOption(configFile);
     options.addOption(configOverrides);
     options.addOption(topologyName);
+    options.addOption(trackerURL);
     options.addOption(verbose);
 
     return options;
@@ -212,6 +228,7 @@ public class HealthManager {
     String overrideConfigFile = cmd.getOptionValue("override_config_file");
     String releaseFile = cmd.getOptionValue("release_file");
     String topologyName = cmd.getOptionValue("topology_name");
+    String trackerURL = cmd.getOptionValue("trackerURL", "http://localhost:8888");
 
     // build the final config by expanding all the variables
     Config config = Config.expand(Config.newBuilder()
@@ -219,20 +236,25 @@ public class HealthManager {
         .putAll(commandLineConfigs(cluster, role, environ, topologyName, verbose))
         .build());
 
+    Config runtime = Config.newBuilder()
+        .put(Key.TRACKER_URL, trackerURL)
+        .build();
 
     LOG.info("Static config loaded successfully ");
     LOG.fine(config.toString());
 
-    HealthManager healthManager = new HealthManager(config);
+    HealthManager healthManager = new HealthManager(config, runtime);
     healthManager.initialize();
 
     LOG.info("Starting the SLA manager");
-    ScheduledFuture<?> future = healthManager.start();
-    try {
-      future.get();
-    } catch (InterruptedException | ExecutionException e) {
-      healthManager.executor.shutdownNow();
-      throw e;
+    List<Future<?>> futures = healthManager.start();
+    for (Future<?> future : futures) {
+      try {
+        future.get();
+      } catch (InterruptedException | ExecutionException e) {
+        healthManager.executor.shutdownNow();
+        throw e;
+      }
     }
   }
 
@@ -241,18 +263,25 @@ public class HealthManager {
     TopologyAPI.Topology topology = getTopology(adaptor);
     SinkVisitor sinkVisitor = new TrackerVisitor();
 
-    Config runtime = Config.newBuilder()
+    runtime = Config.newBuilder()
+        .putAll(runtime)
         .put(Key.TOPOLOGY_DEFINITION, topology)
         .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
         .put(Key.METRICS_READER_INSTANCE, sinkVisitor)
         .build();
 
+    ISchedulerClient schedulerClient = new SchedulerClientFactory(config, runtime)
+        .getSchedulerClient();
+
+    runtime = Config.newBuilder()
+        .putAll(runtime)
+        .put(Key.SCHEDULER_CLIENT_INSTANCE, schedulerClient)
+        .build();
+
     // TODO rename sinkvisitor
     sinkVisitor.initialize(config, runtime);
 
-    // TODO READ policy from yaml
-    policy = new FailedTuplesPolicy();
-    policy.initialize(config, runtime);
+    healthPolicies = Context.healthPolicies(config);
   }
 
   private TopologyAPI.Topology getTopology(SchedulerStateManagerAdaptor adaptor) {
@@ -272,16 +301,37 @@ public class HealthManager {
     return new SchedulerStateManagerAdaptor(statemgr, 5000);
   }
 
-  private ScheduledFuture<?> start() {
-    executor = Executors.newScheduledThreadPool(1);
-    ScheduledFuture<?> future = executor.scheduleWithFixedDelay(new Runnable() {
-      @Override
-      public void run() {
-        LOG.info("Executing SLA Policy: " + policy.getClass().getSimpleName());
-        policy.execute();
-      }
-    }, 1, 15, TimeUnit.SECONDS);
+  private List<Future<?>> start() throws ReflectiveOperationException {
+    List<Future<?>> futures = new ArrayList<>();
+    executor = Executors.newScheduledThreadPool(healthPolicies.size());
 
-    return future;
+    for (String healthPolicy : healthPolicies) {
+      Map<String, String> policyConfigMap = config.getMapValue(healthPolicy);
+      String policyClass = policyConfigMap.get(Key.HEALTH_POLICY_CLASS.value());
+      long policyInterval = policyConfigMap.get(Key.HEALTH_POLICY_INTERVAL.value()) == null
+          ? Long.MAX_VALUE : Long.valueOf(policyConfigMap.get(Key.HEALTH_POLICY_INTERVAL.value()));
+
+      // provide all policy specific config to the policy for initialization
+      Config.Builder policyConfig = Config.newBuilder().putAll(config);
+      for (String policyConfKey : policyConfigMap.keySet()) {
+        policyConfig.put(policyConfKey, policyConfigMap.get(policyConfKey));
+      }
+
+      LOG.log(Level.INFO, "Policy {0} to be executed every {1} ms",
+          new Object[]{policyClass, policyInterval});
+
+      policy = ReflectionUtils.newInstance(policyClass);
+      policy.initialize(policyConfig.build(), runtime);
+      ScheduledFuture<?> future = executor.scheduleWithFixedDelay(new Runnable() {
+        @Override
+        public void run() {
+          LOG.info("Executing SLA Policy: " + policy.getClass().getSimpleName());
+          policy.execute();
+        }
+      }, 1000, policyInterval, TimeUnit.MILLISECONDS);
+      futures.add(future);
+    }
+
+    return futures;
   }
 }
