@@ -57,6 +57,14 @@ public class TrackerOutput {
     return version;
   }
 
+  @Override
+  public String toString() {
+    return "TrackerOutput{"
+        + "status='" + status + '\''
+        + ", result=" + result
+        + '}';
+  }
+
   public static class Result {
     private Map<String, Map<String, String>> metrics;
     private int interval;
@@ -71,7 +79,8 @@ public class TrackerOutput {
       this.component = component;
     }
 
-    public Map<String, Map<String, String>> getMetrics() {return metrics;
+    public Map<String, Map<String, String>> getMetrics() {
+      return metrics;
     }
 
     public int getInterval() {
@@ -80,6 +89,15 @@ public class TrackerOutput {
 
     public String getComponent() {
       return component;
+    }
+
+    @Override
+    public String toString() {
+      return "Result{"
+          + "metrics=" + metrics
+          + ", interval=" + interval
+          + ", component='" + component + '\''
+          + '}';
     }
   }
 }

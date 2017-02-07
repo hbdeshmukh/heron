@@ -14,6 +14,7 @@
 
 package com.twitter.heron.healthmgr;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -229,7 +230,7 @@ public class HealthManager {
     ScheduledFuture<?> future = healthManager.start();
     try {
       future.get();
-    } catch (Exception e) {
+    } catch (InterruptedException | ExecutionException e) {
       healthManager.executor.shutdownNow();
       throw e;
     }

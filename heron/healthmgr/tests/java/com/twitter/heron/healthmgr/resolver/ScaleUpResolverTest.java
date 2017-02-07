@@ -1,4 +1,3 @@
-
 // Copyright 2016 Twitter. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,14 +66,17 @@ public class ScaleUpResolverTest {
         .put(Key.TOPOLOGY_NAME, "ds")
         .build();
 
-    ISchedulerClient schedulerClient = new SchedulerClientFactory(config, runtime).getSchedulerClient();
+    ISchedulerClient schedulerClient =
+        new SchedulerClientFactory(config, runtime).getSchedulerClient();
 
+    TrackerVisitor visitor = new TrackerVisitor();
     runtime = Config.newBuilder()
         .putAll(runtime)
         .put(Key.SCHEDULER_CLIENT_INSTANCE, schedulerClient)
+        .put(Key.METRICS_READER_INSTANCE, visitor)
+        .put(Key.TOPOLOGY_DEFINITION, this.topology)
         .build();
 
-    TrackerVisitor visitor = new TrackerVisitor();
     visitor.initialize(config, runtime);
 
     BackPressureDetector detector = new BackPressureDetector();

@@ -27,14 +27,14 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.basics.ByteAmount;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
-import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.healthmgr.utils.TestUtils;
+import com.twitter.heron.packing.roundrobin.ResourceCompliantRRPacking;
+import com.twitter.heron.proto.system.PackingPlans;
+import com.twitter.heron.scheduler.client.ISchedulerClient;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
-import com.twitter.heron.packing.roundrobin.ResourceCompliantRRPacking;
-import com.twitter.heron.scheduler.client.ISchedulerClient;
 import com.twitter.heron.spi.statemgr.IStateManager;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 import com.twitter.heron.spi.utils.ReflectionUtils;
@@ -69,6 +69,7 @@ public class BackPressureDetectorTest {
 
     ISchedulerClient schedulerClient = Mockito.mock(ISchedulerClient.class);
     when(spyRuntime.get(Key.SCHEDULER_CLIENT_INSTANCE)).thenReturn(schedulerClient);
+    when(spyRuntime.get(Key.TOPOLOGY_DEFINITION)).thenReturn(topology);
 
     stateManager = mock(IStateManager.class);
     SettableFuture<PackingPlans.PackingPlan> future = TestUtils.getTestPacking(this.topology);
@@ -83,6 +84,7 @@ public class BackPressureDetectorTest {
 
     TrackerVisitor visitor = new TrackerVisitor();
     visitor.initialize(config, spyRuntime);
+    when(spyRuntime.get(Key.METRICS_READER_INSTANCE)).thenReturn(visitor);
 
     BackPressureDetector detector = new BackPressureDetector();
     detector.initialize(config, spyRuntime);

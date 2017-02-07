@@ -21,8 +21,8 @@ import java.util.Set;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.detector.outlierdetection.SimpleMADOutlierDetector;
-import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
+import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;

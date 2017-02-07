@@ -23,9 +23,10 @@ public class Diagnosis<T extends Bottleneck> {
 
   private Set<T> summary;
 
-  public Diagnosis(){
+  public Diagnosis() {
     summary = new HashSet<>();
   }
+
   public Diagnosis(Set<T> summary) {
     this.summary = summary;
   }
@@ -34,7 +35,7 @@ public class Diagnosis<T extends Bottleneck> {
     return summary;
   }
 
-  public void addToDiagnosis(T item){
+  public void addToDiagnosis(T item) {
     summary.add(item);
   }
 }

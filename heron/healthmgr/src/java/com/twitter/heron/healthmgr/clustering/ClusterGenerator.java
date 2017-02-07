@@ -21,7 +21,8 @@ public abstract class ClusterGenerator {
 
   private int noClusters;
 
-  public ClusterGenerator() {}
+  public ClusterGenerator() {
+  }
 
   public ClusterGenerator(int noClusters) {
     this.noClusters = noClusters;

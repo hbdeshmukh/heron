@@ -28,7 +28,7 @@ public class BackPressureResult {
     return backPressureInfo;
   }
 
-  public boolean contains(String component){
+  public boolean contains(String component) {
     return backPressureInfo.containsKey(component);
   }
 
@@ -48,7 +48,7 @@ public class BackPressureResult {
 
   public class BackPressureContainer {
     //Container to instanceIds of specific component
-    HashMap<Integer, ArrayList<InstanceBackPressure>> containerInfo;
+    private HashMap<Integer, ArrayList<InstanceBackPressure>> containerInfo;
 
     public BackPressureContainer() {
       this.containerInfo = new HashMap<Integer, ArrayList<InstanceBackPressure>>();
@@ -74,8 +74,8 @@ public class BackPressureResult {
   }
 
   public class InstanceBackPressure {
-    int instanceId;
-    int backPressureValue;
+    private int instanceId;
+    private int backPressureValue;
 
     public InstanceBackPressure(int instanceId, int backPressureValue) {
       this.instanceId = instanceId;

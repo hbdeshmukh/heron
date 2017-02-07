@@ -20,9 +20,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.utils.Runtime;
-import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
@@ -34,14 +34,14 @@ import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
 public class BackPressureDetector implements IDetector<ComponentBottleneck> {
 
-  private final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private static final Logger LOG = Logger.getLogger(BackPressureDetector.class.getName());
+  private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private SinkVisitor visitor;
   private Config runtime;
 
   @Override
-  public void initialize(Config config, Config runtime) {
-    this.runtime = runtime;
+  public void initialize(Config inputConfig, Config inputRuntime) {
+    this.runtime = inputRuntime;
     this.visitor = Runtime.metricsReader(runtime);
   }
 
@@ -70,8 +70,8 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
     // get a packed plan and schedule it
     PackingPlans.PackingPlan serializedPackingPlan = adaptor.getPackingPlan(topology.getName());
     if (serializedPackingPlan == null) {
-      throw new RuntimeException(String.format("Failed to fetch PackingPlan for topology: %s " +
-          "from the state manager", topology.getName()));
+      throw new RuntimeException(String.format("Failed to fetch PackingPlan for topology: %s "
+          + "from the state manager", topology.getName()));
     }
     LOG.log(Level.INFO, "Packing plan fetched from state: {0}", serializedPackingPlan);
     PackingPlan packedPlan = new PackingPlanProtoDeserializer().fromProto(serializedPackingPlan);

@@ -40,7 +40,7 @@ public class InstanceBottleneck extends Bottleneck {
     return false;
   }
 
-  public String getDataPoint(String metric){
+  public String getDataPoint(String metric) {
     return instanceData.getMetricValue(metric);
   }
 }

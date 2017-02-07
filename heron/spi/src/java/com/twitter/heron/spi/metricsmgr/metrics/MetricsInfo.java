@@ -61,8 +61,7 @@ public class MetricsInfo {
   }
 
   @Override
-  public int hashCode()
-  {
+  public int hashCode() {
     int hash = 7;
     hash = 31 * hash + name.hashCode();
     hash = 31 * hash + value.hashCode();

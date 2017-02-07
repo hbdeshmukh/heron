@@ -27,10 +27,13 @@ import com.twitter.heron.spi.packing.IPacking;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoSerializer;
 
-public class TestUtils {
+public final class TestUtils {
 
   private static final String BOLT_NAME = "exclaim1";
   private static final String SPOUT_NAME = "word";
+
+  private TestUtils() {
+  }
 
   public static TopologyAPI.Topology getTopology(String topologyName) {
     TopologyBuilder topologyBuilder = new TopologyBuilder();

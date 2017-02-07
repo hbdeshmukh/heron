@@ -33,13 +33,13 @@ public class ComponentBottleneck extends Bottleneck {
   }
 
 
-  public void merge(ComponentBottleneck bottleneck){
-    for(InstanceBottleneck instanceBottleneck: instances){
-      for(InstanceBottleneck newInstanceBottleneck: bottleneck.getInstances()){
+  public void merge(ComponentBottleneck bottleneck) {
+    for (InstanceBottleneck instanceBottleneck : instances) {
+      for (InstanceBottleneck newInstanceBottleneck : bottleneck.getInstances()) {
         InstanceInfo currentData = instanceBottleneck.getInstanceData();
         InstanceInfo newData = newInstanceBottleneck.getInstanceData();
-        if(currentData.getInstanceId() == newData.getInstanceId()
-            && currentData.getContainerId() == currentData.getInstanceId()){
+        if (currentData.getInstanceId() == newData.getInstanceId()
+            && currentData.getContainerId() == currentData.getInstanceId()) {
           currentData.updateMetrics(newData.getMetrics());
         }
       }
@@ -60,8 +60,9 @@ public class ComponentBottleneck extends Bottleneck {
 
   public boolean contains(String metric, String value) {
     for (InstanceBottleneck instanceBottleneck : instances) {
-      if (instanceBottleneck.contains(metric, value))
+      if (instanceBottleneck.contains(metric, value)) {
         return true;
+      }
     }
     return false;
   }
@@ -69,8 +70,9 @@ public class ComponentBottleneck extends Bottleneck {
   public boolean containsNonZero(String metric) {
     int count = 0;
     for (InstanceBottleneck instanceBottleneck : instances) {
-      if (instanceBottleneck.contains(metric, "0"))
+      if (instanceBottleneck.contains(metric, "0")) {
         count++;
+      }
     }
     if (count == instances.size()) {
       return false;
@@ -80,7 +82,7 @@ public class ComponentBottleneck extends Bottleneck {
 
   public Double[] getDataPoints(String metric) {
     Double[] dataPoints = new Double[instances.size()];
-    for(int i = 0; i < instances.size(); i++){
+    for (int i = 0; i < instances.size(); i++) {
       dataPoints[i] = Double.parseDouble(instances.get(i).getDataPoint(metric));
     }
     return dataPoints;

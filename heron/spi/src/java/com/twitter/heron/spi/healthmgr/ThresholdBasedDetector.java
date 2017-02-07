@@ -14,14 +14,14 @@
 package com.twitter.heron.spi.healthmgr;
 
 
-public abstract class ThresholdBasedDetector<T extends  Bottleneck> implements IDetector<T>{
-  double threshold;
+public abstract class ThresholdBasedDetector<T extends Bottleneck> implements IDetector<T> {
+  private double threshold;
 
-  public ThresholdBasedDetector(double threshold){
+  public ThresholdBasedDetector(double threshold) {
     this.threshold = threshold;
   }
 
-  public double getThreshold(){
+  public double getThreshold() {
     return threshold;
   }
 }

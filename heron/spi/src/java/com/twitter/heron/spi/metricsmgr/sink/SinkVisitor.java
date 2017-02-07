@@ -14,11 +14,10 @@
 
 package com.twitter.heron.spi.metricsmgr.sink;
 
-import com.twitter.heron.api.generated.TopologyAPI;
+import java.util.Collection;
+
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
-
-import java.util.Collection;
 
 
 /**

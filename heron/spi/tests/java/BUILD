@@ -63,6 +63,16 @@ java_test(
     size = "small",
 )
 
+java_test(
+    name = "ComponentBottleneckTest",
+    srcs = glob(["**/healthmgr/ComponentBottleneckTest.java"]),
+    deps = util_deps_files +
+      [
+      "//heron/spi/src/java:metricsmgr-spi-java",
+      "//heron/spi/src/java:healthmgr-spi-java"
+      ],
+    size = "small",
+)
 
 java_library(
     name = "metrics-tests",
@@ -102,11 +112,3 @@ java_tests(
     size = "small",
 )
 
-java_test(
-    name = "ComponentBottleneckTest",
-    srcs = glob(["**/slamgr/ComponentBottleneckTest.java"]),
-    deps = util_deps_files +
-      ["//heron/spi/src/java:metricsmgr-spi-java",
-      "//heron/spi/src/java:slamgr-spi-java"],
-    size = "small",
-)

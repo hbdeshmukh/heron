@@ -24,7 +24,11 @@ import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
 
-public class SLAManagerUtils {
+public final class SLAManagerUtils {
+
+  private SLAManagerUtils() {
+
+  }
 
   public static HashMap<String, ComponentBottleneck> retrieveMetricValues(String metricName,
                                                                           String component,

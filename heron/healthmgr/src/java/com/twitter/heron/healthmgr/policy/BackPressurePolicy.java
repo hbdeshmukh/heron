@@ -36,24 +36,16 @@ import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 
 public class BackPressurePolicy implements SLAPolicy {
 
-  enum Problem {
-    SLOW_INSTANCE, DATA_SKEW, LIMITED_PARALLELISM
-  }
-
-  private final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
-  private final String EXECUTION_COUNT_METRIC = "__execute-count/default";
-  private final String EMIT_COUNT_METRIC = "__emit-count/default";
-
+  private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
+  private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
+  private static final String EMIT_COUNT_METRIC = "__emit-count/default";
   private BackPressureDetector backpressureDetector = new BackPressureDetector();
   private ReportingDetector executeCountDetector = new ReportingDetector(EXECUTION_COUNT_METRIC);
   private ScaleUpResolver scaleUpResolver = new ScaleUpResolver();
   private ReportingDetector emitCountDetector = new ReportingDetector(EMIT_COUNT_METRIC);
-
   private TopologyAPI.Topology topology;
   private TopologyGraph topologyGraph;
-
   private ArrayList<String> topologySort = null;
-
 
   @Override
   public void initialize(Config conf, Config runtime) {
@@ -80,11 +72,12 @@ public class BackPressurePolicy implements SLAPolicy {
         BottleneckUtils.merge(backPressureSummary, executeCountSummary);
 
         if (topologySort == null) {
-          topologySort = getTopologySort(topology);
+          topologySort = getTopologySort();
         }
         for (int i = 0; i < topologySort.size() && !found; i++) {
           String name = topologySort.get(i);
-          ComponentBottleneck current = BottleneckUtils.getComponentBottleneck(backPressureSummary, name);
+          ComponentBottleneck current = BottleneckUtils.getComponentBottleneck(
+              backPressureSummary, name);
           if (current != null) {
             Problem problem = identifyProblem(current);
             if (problem == Problem.LIMITED_PARALLELISM) {
@@ -107,7 +100,6 @@ public class BackPressurePolicy implements SLAPolicy {
     }
   }
 
-
   private double computeScaleUpFactor(ComponentBottleneck current, Set<ComponentBottleneck>
       executeCountSummary) {
     Diagnosis<ComponentBottleneck> emitCountDiagnosis =
@@ -125,7 +117,6 @@ public class BackPressurePolicy implements SLAPolicy {
     return emitSum / executeCountSum;
   }
 
-
   private Problem identifyProblem(ComponentBottleneck current) {
     Double[] backPressureDataPoints = current.getDataPoints(BACKPRESSURE_METRIC);
     DiscreteValueClustering clustering = new DiscreteValueClustering();
@@ -137,8 +128,12 @@ public class BackPressurePolicy implements SLAPolicy {
     ArrayList<Integer> executeCountOutliers =
         executeCountOutlierDetector.detectOutliers(executionCountDataPoints);*/
 
-    if (backPressureClusters.get("1.0").size() <
-        (10 * backPressureClusters.get("0.0").size()) / 100) {
+    int clusterAt0 = backPressureClusters.get("0.0") == null
+        ? 0 : backPressureClusters.get("0.0").size();
+    int clusterAt1 = backPressureClusters.get("1.0") == null
+        ? 0 : backPressureClusters.get("1.0").size();
+
+    if (clusterAt1 < (10 * clusterAt0) / 100) {
       switch (compareExecuteCounts(current)) {
         case 0:
           return Problem.LIMITED_PARALLELISM;
@@ -146,11 +141,12 @@ public class BackPressurePolicy implements SLAPolicy {
           return Problem.SLOW_INSTANCE;
         case 1:
           return Problem.DATA_SKEW;
+        default:
+          return Problem.NONE;
       }
     } else {
       return Problem.LIMITED_PARALLELISM;
     }
-    return null;
   }
 
   private int compareExecuteCounts(ComponentBottleneck bottleneck) {
@@ -190,7 +186,7 @@ public class BackPressurePolicy implements SLAPolicy {
     scaleUpResolver.close();
   }
 
-  private ArrayList<String> getTopologySort(TopologyAPI.Topology topology) {
+  private ArrayList<String> getTopologySort() {
     for (TopologyAPI.Bolt.Builder bolt : topology.toBuilder().getBoltsBuilderList()) {
       String boltName = bolt.getComp().getName();
 
@@ -203,5 +199,9 @@ public class BackPressurePolicy implements SLAPolicy {
     TopologyGraph tmp = new TopologyGraph(this.topologyGraph);
 
     return tmp.topologicalSort();
+  }
+
+  enum Problem {
+    SLOW_INSTANCE, DATA_SKEW, LIMITED_PARALLELISM, NONE
   }
 }

@@ -16,13 +16,12 @@ package com.twitter.heron.healthmgr.resolver;
 
 import java.util.Set;
 
+import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IResolver;
-import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
-
-import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
+import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 
 public class FailedTuplesResolver implements IResolver<InstanceBottleneck> {
 
@@ -35,10 +34,11 @@ public class FailedTuplesResolver implements IResolver<InstanceBottleneck> {
   public Boolean resolve(Diagnosis<InstanceBottleneck> diagnosis, TopologyAPI.Topology topology) {
     Set<InstanceBottleneck> summary = diagnosis.getSummary();
     for (InstanceBottleneck result : summary) {
-      for(MetricsInfo metric : result.getInstanceData().getMetrics())
-      System.out.println("Instance " + result.getInstanceData().getInstanceId() + " in container "
-          + result.getInstanceData().getContainerId()
-          + " has " + metric.getValue() + " failed tuples.");
+      for (MetricsInfo metric : result.getInstanceData().getMetrics()) {
+        System.out.println("Instance " + result.getInstanceData().getInstanceId() + " in container "
+            + result.getInstanceData().getContainerId()
+            + " has " + metric.getValue() + " failed tuples.");
+      }
     }
     return true;
   }

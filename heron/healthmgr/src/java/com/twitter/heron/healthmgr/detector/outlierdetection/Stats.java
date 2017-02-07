@@ -14,7 +14,10 @@
 package com.twitter.heron.healthmgr.detector.outlierdetection;
 
 
-public class Stats {
+public final class Stats {
+
+  private Stats() {
+  }
 
   public static double median(Double[] m) {
     int middle = m.length / 2;

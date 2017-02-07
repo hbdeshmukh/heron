@@ -45,14 +45,14 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   private ISchedulerClient schedulerClient;
   private int newParallelism;
 
-  public void setParallelism(int parallelism){
+  public void setParallelism(int parallelism) {
     this.newParallelism = parallelism;
   }
 
   @Override
-  public void initialize(Config config, Config runtime) {
-    this.config = config;
-    this.runtime = runtime;
+  public void initialize(Config inputConfig, Config inputRuntime) {
+    this.config = inputConfig;
+    this.runtime = inputRuntime;
     schedulerClient = (ISchedulerClient) Runtime.schedulerClientInstance(runtime);
   }
 
@@ -63,9 +63,9 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       throw new RuntimeException("Not valid diagnosis object");
     }
 
-    if(this.newParallelism == 0){
-      throw new RuntimeException("New parallelism after scale up is 0." +
-          " Please set the parallelism value");
+    if (this.newParallelism == 0) {
+      throw new RuntimeException("New parallelism after scale up is 0."
+          + " Please set the parallelism value");
     }
 
     ComponentBottleneck bottleneck = diagnosis.getSummary().iterator().next();

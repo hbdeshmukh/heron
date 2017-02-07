@@ -19,7 +19,10 @@ import java.util.Set;
 
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 
-public class BottleneckUtils {
+public final class BottleneckUtils {
+
+  private BottleneckUtils() {
+  }
 
   public static ComponentBottleneck getComponentBottleneck(Set<ComponentBottleneck> summary,
                                                            String component) {
@@ -43,11 +46,11 @@ public class BottleneckUtils {
   }
 
   public static int computeSum(Set<ComponentBottleneck> summary,
-                               String componentMame, String metricName){
+                               String componentMame, String metricName) {
     int sum = 0;
     ComponentBottleneck tmp = getComponentBottleneck(summary, componentMame);
     Double[] data = tmp.getDataPoints(metricName);
-    for(int i = 0; i < data.length; i++){
+    for (int i = 0; i < data.length; i++) {
       sum += data[i];
     }
     return sum;

@@ -27,12 +27,14 @@ public class TopologyGraph {
   private MultiMap outEdges = new MultiMap();
   private MultiMap inEdges = new MultiMap();
 
-  public TopologyGraph(){}
+  public TopologyGraph() {
+  }
 
-  public TopologyGraph(TopologyGraph graph){
+  public TopologyGraph(TopologyGraph graph) {
     this.inEdges.putAll(graph.inEdges);
     this.outEdges.putAll(graph.outEdges);
   }
+
   /**
    * Adds a directed edge from origin to target. The vertices are not
    * required to exist prior to this call.
@@ -44,8 +46,9 @@ public class TopologyGraph {
   public boolean addEdge(String source, String dest) throws RuntimeException {
 
     if (source != null && dest != null) {
-      if (hasPath(dest, source))
+      if (hasPath(dest, source)) {
         return false;
+      }
 
       outEdges.put(source, dest);
       outEdges.put(dest, null);
@@ -79,11 +82,13 @@ public class TopologyGraph {
    */
   public void removeVertex(String vertex) {
     Set<String> targets = outEdges.removeAll(vertex);
-    for (Iterator<String> it = targets.iterator(); it.hasNext(); )
+    for (Iterator<String> it = targets.iterator(); it.hasNext();) {
       inEdges.remove(it.next(), vertex);
+    }
     Set<String> origins = inEdges.removeAll(vertex);
-    for (Iterator<String> it = origins.iterator(); it.hasNext(); )
+    for (Iterator<String> it = origins.iterator(); it.hasNext();) {
       outEdges.remove(it.next(), vertex);
+    }
   }
 
   /**
@@ -109,10 +114,11 @@ public class TopologyGraph {
   private Set<String> computeZeroEdgeVertices(MultiMap map) {
     Set<String> candidates = map.keySet();
     Set<String> roots = new LinkedHashSet<String>(candidates.size());
-    for (Iterator<String> it = candidates.iterator(); it.hasNext(); ) {
+    for (Iterator<String> it = candidates.iterator(); it.hasNext();) {
       String candidate = it.next();
-      if (map.get(candidate).isEmpty())
+      if (map.get(candidate).isEmpty()) {
         roots.add(candidate);
+      }
     }
     return roots;
   }
@@ -144,13 +150,16 @@ public class TopologyGraph {
   }
 
   private boolean hasPath(String start, String end) {
-    if (start == end)
+    if (start == end) {
       return true;
+    }
 
     Set<String> children = outEdges.get(start);
-    for (Iterator<String> it = children.iterator(); it.hasNext(); )
-      if (hasPath(it.next(), end))
+    for (Iterator<String> it = children.iterator(); it.hasNext();) {
+      if (hasPath(it.next(), end)) {
         return true;
+      }
+    }
     return false;
   }
 
@@ -203,12 +212,13 @@ public class TopologyGraph {
         values = new LinkedHashSet<String>();
         nMap.put(key, values);
       }
-      if (val != null)
+      if (val != null) {
         values.add(val);
+      }
     }
 
-    public void putAll(MultiMap map){
-      for(String key : map.keySet()){
+    public void putAll(MultiMap map) {
+      for (String key : map.keySet()) {
         Set<String> newValue = new LinkedHashSet<String>(map.get(key));
         nMap.put(key, newValue);
       }
@@ -250,8 +260,9 @@ public class TopologyGraph {
      */
     public void remove(String key, String val) {
       Set<String> values = nMap.get(key);
-      if (values != null)
+      if (values != null) {
         values.remove(val);
+      }
     }
 
     public String toString() {
