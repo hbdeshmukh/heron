@@ -61,10 +61,10 @@ public class BackPressurePolicy implements SLAPolicy {
   public void execute() {
     Diagnosis<ComponentBottleneck> backPressuredDiagnosis = backpressureDetector.detect(topology);
     Diagnosis<ComponentBottleneck> executeCountDiagnosis = executeCountDetector.detect(topology);
+
     boolean found = false;
 
     if (backPressuredDiagnosis != null && executeCountDiagnosis != null) {
-
       Set<ComponentBottleneck> backPressureSummary = backPressuredDiagnosis.getSummary();
       Set<ComponentBottleneck> executeCountSummary = executeCountDiagnosis.getSummary();
 
@@ -81,18 +81,18 @@ public class BackPressurePolicy implements SLAPolicy {
           if (current != null) {
             Problem problem = identifyProblem(current);
             if (problem == Problem.LIMITED_PARALLELISM) {
-              double scaleFactor = computeScaleUpFactor(current, executeCountSummary);
+              double scaleFactor = computeScaleUpFactor(current);
               int newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
-              System.out.println("scale factor" + scaleFactor + " " + newParallelism);
+              System.out.println("scale factor " + scaleFactor
+                  + " new parallelism " + newParallelism);
 
-              if (false) {
-                Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
-                currentDiagnosis.addToDiagnosis(current);
-                newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
-                scaleUpResolver.setParallelism(newParallelism);
-                scaleUpResolver.resolve(currentDiagnosis, topology);
-                found = true;
-              }
+              Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
+              currentDiagnosis.addToDiagnosis(current);
+              newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
+              scaleUpResolver.setParallelism(newParallelism);
+              scaleUpResolver.resolve(currentDiagnosis, topology);
+              found = true;
+
             }
           }
         }
@@ -100,21 +100,21 @@ public class BackPressurePolicy implements SLAPolicy {
     }
   }
 
-  private double computeScaleUpFactor(ComponentBottleneck current, Set<ComponentBottleneck>
-      executeCountSummary) {
-    Diagnosis<ComponentBottleneck> emitCountDiagnosis =
-        emitCountDetector.detect(topology);
-    Set<ComponentBottleneck> emitCountSummary = emitCountDiagnosis.getSummary();
-    Set<String> parentComponents = topologyGraph.getParents(current.getComponentName());
-    double emitSum = 0;
-    for (String name : parentComponents) {
-      emitSum += BottleneckUtils.computeSum(emitCountSummary, name, EMIT_COUNT_METRIC);
-    }
-    double executeCountSum = BottleneckUtils.computeSum(executeCountSummary,
-        current.getComponentName(), EXECUTION_COUNT_METRIC);
+  private double computeScaleUpFactor(ComponentBottleneck current) {
 
-    System.out.println("LLL " + emitSum + " " + executeCountSum + " " + emitSum / executeCountSum);
-    return emitSum / executeCountSum;
+    double executeCountSum = BottleneckUtils.computeSum(current, EXECUTION_COUNT_METRIC);
+
+    double maxSum = 0;
+    for (int i = 0; i < current.getInstances().size(); i++) {
+      double backpressureTime = Double.parseDouble(
+          current.getInstances().get(i).getDataPoint(BACKPRESSURE_METRIC));
+      double executeCount = Double.parseDouble(
+          current.getInstances().get(i).getDataPoint(EXECUTION_COUNT_METRIC));
+      maxSum += (1 + backpressureTime / 60000) * executeCount;
+      System.out.println(i + " backpressure " + backpressureTime + " execute: " + executeCount
+          + " " + (1 + backpressureTime / 60000) * executeCount + " " + maxSum);
+    }
+    return maxSum / executeCountSum;
   }
 
   private Problem identifyProblem(ComponentBottleneck current) {
@@ -122,11 +122,6 @@ public class BackPressurePolicy implements SLAPolicy {
     DiscreteValueClustering clustering = new DiscreteValueClustering();
     HashMap<String, ArrayList<Integer>> backPressureClusters =
         clustering.createBinaryClusters(backPressureDataPoints, 0.0);
-
-    /*Double[] executionCountDataPoints = current.getDataPoints(EXECUTION_COUNT_METRIC);
-    SimpleMADOutlierDetector executeCountOutlierDetector = new SimpleMADOutlierDetector(1.0);
-    ArrayList<Integer> executeCountOutliers =
-        executeCountOutlierDetector.detectOutliers(executionCountDataPoints);*/
 
     int clusterAt0 = backPressureClusters.get("0.0") == null
         ? 0 : backPressureClusters.get("0.0").size();
@@ -142,7 +137,7 @@ public class BackPressurePolicy implements SLAPolicy {
         case 1:
           return Problem.DATA_SKEW;
         default:
-          return Problem.NONE;
+          return Problem.OTHER;
       }
     } else {
       return Problem.LIMITED_PARALLELISM;
@@ -202,6 +197,6 @@ public class BackPressurePolicy implements SLAPolicy {
   }
 
   enum Problem {
-    SLOW_INSTANCE, DATA_SKEW, LIMITED_PARALLELISM, NONE
+    SLOW_INSTANCE, DATA_SKEW, LIMITED_PARALLELISM, OTHER
   }
 }

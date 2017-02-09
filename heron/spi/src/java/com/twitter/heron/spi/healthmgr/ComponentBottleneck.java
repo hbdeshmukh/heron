@@ -39,7 +39,7 @@ public class ComponentBottleneck extends Bottleneck {
         InstanceInfo currentData = instanceBottleneck.getInstanceData();
         InstanceInfo newData = newInstanceBottleneck.getInstanceData();
         if (currentData.getInstanceId() == newData.getInstanceId()
-            && currentData.getContainerId() == currentData.getInstanceId()) {
+            && currentData.getContainerId() == currentData.getContainerId()) {
           currentData.updateMetrics(newData.getMetrics());
         }
       }

@@ -42,7 +42,7 @@ public class BackPressurePolicyTest {
    */
   @Before
   public void setUp() throws Exception {
-    this.topology = TestUtils.getTopology("ds");
+    this.topology = TestUtils.getTopology("ex");
   }
 
   @Test
@@ -55,6 +55,8 @@ public class BackPressurePolicyTest {
         .put(Key.INSTANCE_DISK, ByteAmount.fromGigabytes(1).asBytes())
         .put(Key.STATEMGR_ROOT_PATH, "/home/avrilia/.herondata/repository/state/local")
         .put(Key.STATE_MANAGER_CLASS, LocalFileSystemStateManager.class.getName())
+        .put(Key.TOPOLOGY_NAME, "ex")
+        .put(Key.CLUSTER, "local")
         .build();
 
     stateManager = new LocalFileSystemStateManager();
@@ -64,7 +66,7 @@ public class BackPressurePolicyTest {
 
     Config runtime = Config.newBuilder()
         .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
-        .put(Key.TOPOLOGY_NAME, "ds")
+        .put(Key.TOPOLOGY_NAME, "ex")
         .build();
 
     ISchedulerClient schedulerClient = new SchedulerClientFactory(config, runtime)

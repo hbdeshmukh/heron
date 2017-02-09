@@ -52,8 +52,10 @@ public class ScaleUpResolverTest {
         .put(Key.INSTANCE_CPU, "1")
         .put(Key.INSTANCE_RAM, ByteAmount.fromMegabytes(192).asBytes())
         .put(Key.INSTANCE_DISK, ByteAmount.fromGigabytes(1).asBytes())
-        .put(Key.STATEMGR_ROOT_PATH, "/Users/heron/.herondata/repository/state/local")
+        .put(Key.STATEMGR_ROOT_PATH, "/home/avrilia/.herondata/repository/state/local")
+        .put(Key.CLUSTER, "local")
         .put(Key.STATE_MANAGER_CLASS, LocalFileSystemStateManager.class.getName())
+        .put(Key.TOPOLOGY_NAME, "ds")
         .build();
 
     stateManager = new LocalFileSystemStateManager();
