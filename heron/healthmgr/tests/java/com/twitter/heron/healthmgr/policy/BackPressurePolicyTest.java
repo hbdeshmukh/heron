@@ -60,6 +60,7 @@ public class BackPressurePolicyTest {
         .put(Key.TOPOLOGY_NAME, "ds")
         .put(Key.CLUSTER, "local")
         .put(Key.TRACKER_URL, "http://localhost:8888")
+        .put(Key.SCHEDULER_IS_SERVICE, true)
         .build();
 
     stateManager = new LocalFileSystemStateManager();

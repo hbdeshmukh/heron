@@ -20,7 +20,6 @@ import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.api.topology.TopologyBuilder;
 import com.twitter.heron.packing.roundrobin.RoundRobinPacking;
 import com.twitter.heron.proto.system.PackingPlans;
-import com.twitter.heron.spi.common.ClusterDefaults;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.packing.IPacking;
@@ -61,7 +60,6 @@ public final class TestUtils {
     Config config = Config.newBuilder()
         .put(Key.TOPOLOGY_ID, topology.getId())
         .put(Key.TOPOLOGY_NAME, topology.getName())
-        .putAll(ClusterDefaults.getDefaults())
         .build();
 
     packing.initialize(config, topology);

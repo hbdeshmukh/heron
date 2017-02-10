@@ -24,11 +24,7 @@ import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.scheduler.ILauncher;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
-
-
 public final class Runtime {
-
-
   private Runtime() {
   }
 
