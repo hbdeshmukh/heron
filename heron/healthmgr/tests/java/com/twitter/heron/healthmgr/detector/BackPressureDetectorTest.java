@@ -63,6 +63,8 @@ public class BackPressureDetectorTest {
         .put(Key.INSTANCE_CPU, "1")
         .put(Key.INSTANCE_RAM, ByteAmount.fromMegabytes(192).asBytes())
         .put(Key.INSTANCE_DISK, ByteAmount.fromGigabytes(1).asBytes())
+        .put(Key.TRACKER_URL, "http://localhost:8888")
+        .put(Key.CLUSTER, "local")
         .build();
 
     spyRuntime = Mockito.spy(Config.newBuilder().build());
@@ -70,6 +72,8 @@ public class BackPressureDetectorTest {
     ISchedulerClient schedulerClient = Mockito.mock(ISchedulerClient.class);
     when(spyRuntime.get(Key.SCHEDULER_CLIENT_INSTANCE)).thenReturn(schedulerClient);
     when(spyRuntime.get(Key.TOPOLOGY_DEFINITION)).thenReturn(topology);
+    when(spyRuntime.get(Key.TRACKER_URL)).thenReturn("http://localhost:8888");
+
 
     stateManager = mock(IStateManager.class);
     SettableFuture<PackingPlans.PackingPlan> future = TestUtils.getTestPacking(this.topology);

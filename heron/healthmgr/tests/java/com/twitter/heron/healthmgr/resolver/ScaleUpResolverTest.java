@@ -56,6 +56,7 @@ public class ScaleUpResolverTest {
         .put(Key.CLUSTER, "local")
         .put(Key.STATE_MANAGER_CLASS, LocalFileSystemStateManager.class.getName())
         .put(Key.TOPOLOGY_NAME, "ds")
+        .put(Key.TRACKER_URL, "http://localhost:8888")
         .build();
 
     stateManager = new LocalFileSystemStateManager();
@@ -66,6 +67,7 @@ public class ScaleUpResolverTest {
     Config runtime = Config.newBuilder()
         .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
         .put(Key.TOPOLOGY_NAME, "ds")
+        .put(Key.TRACKER_URL, "http://localhost:8888")
         .build();
 
     ISchedulerClient schedulerClient =

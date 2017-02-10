@@ -19,6 +19,8 @@ import org.junit.Test;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.basics.ByteAmount;
+import com.twitter.heron.healthmgr.services.DetectorService;
+import com.twitter.heron.healthmgr.services.ResolverService;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.healthmgr.utils.TestUtils;
 import com.twitter.heron.packing.roundrobin.ResourceCompliantRRPacking;
@@ -42,7 +44,7 @@ public class BackPressurePolicyTest {
    */
   @Before
   public void setUp() throws Exception {
-    this.topology = TestUtils.getTopology("ex");
+    this.topology = TestUtils.getTopology("ds");
   }
 
   @Test
@@ -55,8 +57,9 @@ public class BackPressurePolicyTest {
         .put(Key.INSTANCE_DISK, ByteAmount.fromGigabytes(1).asBytes())
         .put(Key.STATEMGR_ROOT_PATH, "/home/avrilia/.herondata/repository/state/local")
         .put(Key.STATE_MANAGER_CLASS, LocalFileSystemStateManager.class.getName())
-        .put(Key.TOPOLOGY_NAME, "ex")
+        .put(Key.TOPOLOGY_NAME, "ds")
         .put(Key.CLUSTER, "local")
+        .put(Key.TRACKER_URL, "http://localhost:8888")
         .build();
 
     stateManager = new LocalFileSystemStateManager();
@@ -66,11 +69,15 @@ public class BackPressurePolicyTest {
 
     Config runtime = Config.newBuilder()
         .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
-        .put(Key.TOPOLOGY_NAME, "ex")
+        .put(Key.TOPOLOGY_NAME, "ds")
+        .put(Key.TRACKER_URL, "http://localhost:8888")
         .build();
 
     ISchedulerClient schedulerClient = new SchedulerClientFactory(config, runtime)
         .getSchedulerClient();
+
+    DetectorService ds = new DetectorService();
+    ResolverService rs = new ResolverService();
 
     TrackerVisitor visitor = new TrackerVisitor();
 
