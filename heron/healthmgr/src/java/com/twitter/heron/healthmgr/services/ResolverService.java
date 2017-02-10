@@ -29,10 +29,10 @@ public class ResolverService {
   private ActionLog log;
 
   public ResolverService() {
+    this.log = new ActionLog();
   }
 
   public void initialize(Config config, Config runtime) {
-    this.log = new ActionLog();
   }
 
   public <T extends Bottleneck> boolean run(IResolver<T> resolver, TopologyAPI.Topology topology,
@@ -47,6 +47,10 @@ public class ResolverService {
 
     log.addAction(topology.getName(), problem, null, diagnosis);
     return resolver.resolve(diagnosis, topology);
+  }
+
+  public ActionLog getLog(){
+    return this.log;
   }
 
   public void close() {

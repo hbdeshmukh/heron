@@ -29,6 +29,7 @@ import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IResolver;
+import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 import com.twitter.heron.spi.packing.IRepacking;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
@@ -38,6 +39,8 @@ import com.twitter.heron.spi.utils.ReflectionUtils;
 
 public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
+  private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
+  private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
   private static final Logger LOG = Logger.getLogger(ScaleUpResolver.class.getName());
 
   private Config config;
@@ -45,9 +48,6 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   private ISchedulerClient schedulerClient;
   private int newParallelism;
 
-  public void setParallelism(int parallelism) {
-    this.newParallelism = parallelism;
-  }
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
@@ -62,6 +62,10 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     if (diagnosis.getSummary() == null) {
       throw new RuntimeException("Not valid diagnosis object");
     }
+
+    ComponentBottleneck current = diagnosis.getSummary().iterator().next();
+    double scaleFactor = computeScaleUpFactor(current);
+    this.newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
 
     if (this.newParallelism == 0) {
       throw new RuntimeException("New parallelism after scale up is 0."
@@ -102,6 +106,23 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
   }
 
+
+  private double computeScaleUpFactor(ComponentBottleneck current) {
+
+    double executeCountSum = BottleneckUtils.computeSum(current, EXECUTION_COUNT_METRIC);
+
+    double maxSum = 0;
+    for (int i = 0; i < current.getInstances().size(); i++) {
+      double backpressureTime = Double.parseDouble(
+          current.getInstances().get(i).getDataPoint(BACKPRESSURE_METRIC));
+      double executeCount = Double.parseDouble(
+          current.getInstances().get(i).getDataPoint(EXECUTION_COUNT_METRIC));
+      maxSum += (1 + backpressureTime / 60000) * executeCount;
+      System.out.println(i + " backpressure " + backpressureTime + " execute: " + executeCount
+          + " " + (1 + backpressureTime / 60000) * executeCount + " " + maxSum);
+    }
+    return maxSum / executeCountSum;
+  }
 
   @Override
   public void close() {

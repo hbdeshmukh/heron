@@ -37,6 +37,7 @@ public class ActionLog {
     }
     topologyLog.add(action);
     this.log.put(topologyName, topologyLog);
+    System.out.println(this.log);
   }
 
   public <T extends Bottleneck> void addAction(String topologyName, String problem,

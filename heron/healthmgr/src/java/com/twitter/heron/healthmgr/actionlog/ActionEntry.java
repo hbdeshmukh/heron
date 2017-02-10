@@ -50,4 +50,19 @@ public class ActionEntry<T extends Bottleneck> {
   public Diagnosis<T> getDiagnosis() {
     return diagnosis;
   }
+
+  public String toString() {
+    if (possibleProblems == null) {
+      return "[ActionTime: " + actionTime
+          + " Problem: " + problem
+          + " Diagnosis: " + diagnosis.toString()
+          + "]";
+    } else {
+      return "[ActionTime: " + actionTime
+          + " Problem: " + problem
+          + " Possible problems: " + possibleProblems.toString()
+          + " Diagnosis: " + diagnosis.toString()
+          + "]";
+    }
+  }
 }

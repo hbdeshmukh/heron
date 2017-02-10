@@ -90,7 +90,6 @@ public class ScaleUpResolverTest {
     Assert.assertEquals(1, result.getSummary().size());
 
     ScaleUpResolver resolver = new ScaleUpResolver();
-    resolver.setParallelism(3);
     resolver.initialize(config, runtime);
 
     resolver.resolve(result, topology);

@@ -50,6 +50,8 @@ public class BackPressurePolicyTest {
   @Test
   public void testPolicy() throws InterruptedException {
 
+    DetectorService ds = new DetectorService();
+    ResolverService rs = new ResolverService();
     Config config = Config.newBuilder()
         .put(Key.REPACKING_CLASS, ResourceCompliantRRPacking.class.getName())
         .put(Key.INSTANCE_CPU, "1")
@@ -72,13 +74,12 @@ public class BackPressurePolicyTest {
         .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
         .put(Key.TOPOLOGY_NAME, "ds")
         .put(Key.TRACKER_URL, "http://localhost:8888")
+        .put(Key.HEALTH_MGR_DETECTOR_SERVICE, ds)
+        .put(Key.HEALTH_MGR_RESOLVER_SERVICE, rs)
         .build();
 
     ISchedulerClient schedulerClient = new SchedulerClientFactory(config, runtime)
         .getSchedulerClient();
-
-    DetectorService ds = new DetectorService();
-    ResolverService rs = new ResolverService();
 
     TrackerVisitor visitor = new TrackerVisitor();
 
