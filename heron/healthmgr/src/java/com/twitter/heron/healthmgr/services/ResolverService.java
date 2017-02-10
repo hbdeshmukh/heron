@@ -19,6 +19,7 @@ import java.util.ArrayList;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.actionlog.ActionLog;
+import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.Bottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IResolver;
@@ -30,7 +31,7 @@ public class ResolverService {
   public ResolverService() {
   }
 
-  public void initialize() {
+  public void initialize(Config config, Config runtime) {
     this.log = new ActionLog();
   }
 

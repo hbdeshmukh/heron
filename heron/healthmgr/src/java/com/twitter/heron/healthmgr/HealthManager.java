@@ -36,6 +36,8 @@ import org.apache.commons.cli.ParseException;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.utils.logging.LoggingHelper;
+import com.twitter.heron.healthmgr.services.DetectorService;
+import com.twitter.heron.healthmgr.services.ResolverService;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
 import com.twitter.heron.scheduler.client.SchedulerClientFactory;
@@ -60,6 +62,8 @@ public class HealthManager {
   private HealthPolicy policy;
   private ScheduledExecutorService executor;
   private List<String> healthPolicies;
+  private final DetectorService detectorService = new DetectorService();
+  private final ResolverService resolverService = new ResolverService();
 
   public HealthManager(Config config, Config runtime) {
     this.config = config;
@@ -268,6 +272,8 @@ public class HealthManager {
         .put(Key.TOPOLOGY_DEFINITION, topology)
         .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
         .put(Key.METRICS_READER_INSTANCE, sinkVisitor)
+        .put(Key.HEALTH_MGR_DETECTOR_SERVICE, detectorService)
+        .put(Key.HEALTH_MGR_RESOLVER_SERVICE, resolverService)
         .build();
 
     ISchedulerClient schedulerClient = new SchedulerClientFactory(config, runtime)
@@ -280,6 +286,9 @@ public class HealthManager {
 
     // TODO rename sinkvisitor
     sinkVisitor.initialize(config, runtime);
+
+    detectorService.initialize(config, runtime);
+    resolverService.initialize(config, runtime);
 
     healthPolicies = Context.healthPolicies(config);
   }

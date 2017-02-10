@@ -127,6 +127,8 @@ public enum Key {
   HEALTH_POLICY_CLASS                 ("health.policy.class"),
   HEALTH_POLICY_INTERVAL              ("health.policy.interval.ms"),
   HEALTH_POLICIES                     ("heron.class.health.policies"),
+  HEALTH_MGR_DETECTOR_SERVICE         ("heron.runtime.healthmgr.detector.service"),
+  HEALTH_MGR_RESOLVER_SERVICE         ("heron.runtime.healthmgr.resolver.service"),
   METRICS_READER_INSTANCE             ("heron.runtime.metrics.reader"),
   TRACKER_URL                         ("heron.runtime.tracker.url"),
 

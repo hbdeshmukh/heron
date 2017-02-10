@@ -14,6 +14,7 @@
 package com.twitter.heron.healthmgr.services;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.Bottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IDetector;
@@ -23,7 +24,7 @@ public class DetectorService {
   public DetectorService() {
   }
 
-  public void initialize() {
+  public void initialize(Config config, Config runtime) {
 
   }
 
