@@ -68,6 +68,7 @@ public class ReportingDetector implements IDetector<ComponentBottleneck> {
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
 
+
   @Override
   public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
                                   Diagnosis<ComponentBottleneck> secondDiagnosis){

@@ -23,13 +23,15 @@ public class ActionEntry<T extends Bottleneck> {
   private String actionTime;
   private String action;
   private Diagnosis<T> diagnosis;
+  private double change;
 
   public ActionEntry(String actionTaken,
-                     Diagnosis<T> data) {
+                     Diagnosis<T> data, double change) {
     this.actionTime = new SimpleDateFormat("yyyyMMdd_HHmmss")
         .format(Calendar.getInstance().getTime());
     this.action = actionTaken;
     this.diagnosis = data;
+    this.change = change;
   }
 
   public String getActionTime() {
@@ -40,6 +42,9 @@ public class ActionEntry<T extends Bottleneck> {
     return action;
   }
 
+  public double getChange() {
+    return change;
+  }
 
   public Diagnosis<T> getDiagnosis() {
     return diagnosis;

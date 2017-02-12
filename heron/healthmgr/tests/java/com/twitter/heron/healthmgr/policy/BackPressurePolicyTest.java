@@ -14,6 +14,8 @@
 
 package com.twitter.heron.healthmgr.policy;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,7 +37,6 @@ import com.twitter.heron.statemgr.localfs.LocalFileSystemStateManager;
 
 public class BackPressurePolicyTest {
 
-  private static final String STATE_MANAGER_CLASS = "STATE_MANAGER_CLASS";
   private IStateManager stateManager;
   private TopologyAPI.Topology topology;
 
@@ -97,7 +98,9 @@ public class BackPressurePolicyTest {
 
     policy.execute();
 
-    for(int i = 0 ; i < 10; i++)
-    policy.evaluate();
+    TimeUnit.MINUTES.sleep(3);
+    //for(int i = 0 ; i < 100; i++) {
+      policy.evaluate();
+    //}
   }
 }

@@ -31,6 +31,19 @@ public interface IResolver<T extends Bottleneck> extends AutoCloseable {
   Boolean resolve(Diagnosis<T> diagnosis, TopologyAPI.Topology topology);
 
   /**
+   * Called to compute the expected outcome of the resolver given a diagnosis
+   */
+  double estimateOutcome(Diagnosis<T> diagnosis, TopologyAPI.Topology topology);
+
+
+  /**
+   * Checks whether the newDiagnosis reflects the improvement expected
+   * by resolving the oldDiagnosis
+   */
+  boolean successfulAction(Diagnosis<T> oldDiagnosis, Diagnosis<T> newDiagnosis,
+                           double improvement) ;
+
+  /**
    * This is to for disposing or cleaning up any internal state accumulated by
    * the resolver
    */

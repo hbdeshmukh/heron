@@ -15,11 +15,13 @@ package com.twitter.heron.healthmgr.resolver;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.basics.SysUtils;
+import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.scheduler.Scheduler;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
@@ -59,18 +61,6 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   @Override
   public Boolean resolve(Diagnosis<ComponentBottleneck> diagnosis, TopologyAPI.Topology topology) {
 
-    if (diagnosis.getSummary() == null) {
-      throw new RuntimeException("Not valid diagnosis object");
-    }
-
-    ComponentBottleneck current = diagnosis.getSummary().iterator().next();
-    double scaleFactor = computeScaleUpFactor(current);
-    this.newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
-
-    if (this.newParallelism == 0) {
-      throw new RuntimeException("New parallelism after scale up is 0."
-          + " Please set the parallelism value");
-    }
 
     ComponentBottleneck bottleneck = diagnosis.getSummary().iterator().next();
     String componentName = bottleneck.getComponentName();
@@ -105,9 +95,25 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     return true;
 
   }
+   @Override
+   public double estimateOutcome(Diagnosis<ComponentBottleneck> diagnosis,
+                                         TopologyAPI.Topology topology){
+     if (diagnosis.getSummary() == null) {
+       throw new RuntimeException("Not valid diagnosis object");
+     }
 
+     ComponentBottleneck current = diagnosis.getSummary().iterator().next();
+     double scaleFactor = computeScaleUpFactor(current);
+     this.newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
 
-  private double computeScaleUpFactor(ComponentBottleneck current) {
+     if (this.newParallelism == 0) {
+       throw new RuntimeException("New parallelism after scale up is 0."
+           + " Please set the parallelism value");
+     }
+     return scaleFactor;
+   }
+
+    private double computeScaleUpFactor(ComponentBottleneck current) {
 
     double executeCountSum = BottleneckUtils.computeSum(current, EXECUTION_COUNT_METRIC);
 
@@ -122,6 +128,32 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
           + " " + (1 + backpressureTime / 60000) * executeCount + " " + maxSum);
     }
     return maxSum / executeCountSum;
+  }
+
+  @Override
+  public boolean successfulAction(Diagnosis<ComponentBottleneck> oldDiagnosis,
+                                  Diagnosis<ComponentBottleneck> newDiagnosis, double improvement) {
+
+    Set<ComponentBottleneck> oldSummary = oldDiagnosis.getSummary();
+    Set<ComponentBottleneck> newSummary = newDiagnosis.getSummary();
+    ComponentBottleneck oldComponent = oldSummary.iterator().next();
+    ComponentBottleneck newComponent = newSummary.iterator().next();
+    System.out.println("old " + oldComponent.toString());
+    System.out.println("new " + newComponent.toString());
+    if (!oldComponent.getComponentName().equals(newComponent.getComponentName())) {
+      return true;
+    }
+    if (SLAManagerUtils.reducedBackPressure(oldComponent, newComponent)) {
+      System.out.println("reduced backpressure");
+      return true;
+    }
+    if (SLAManagerUtils.improvedMetricSum(oldComponent, newComponent,
+        EXECUTION_COUNT_METRIC, improvement)) {
+      System.out.println("third");
+      return true;
+    }
+
+    return false;
   }
 
   @Override

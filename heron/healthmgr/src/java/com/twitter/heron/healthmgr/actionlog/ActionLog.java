@@ -41,8 +41,8 @@ public class ActionLog {
   }
 
   public <T extends Bottleneck> void addAction(String topologyName, String problem,
-                                               Diagnosis<T> diagnosis) {
-    ActionEntry<T> action = new ActionEntry<T>(problem, diagnosis);
+                                               Diagnosis<T> diagnosis, double change) {
+    ActionEntry<T> action = new ActionEntry<T>(problem, diagnosis, change);
     addTopologyEntry(topologyName, action);
   }
 

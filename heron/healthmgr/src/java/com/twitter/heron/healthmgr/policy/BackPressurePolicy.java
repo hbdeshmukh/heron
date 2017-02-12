@@ -30,6 +30,7 @@ import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.HealthPolicy;
 import com.twitter.heron.spi.healthmgr.IDetector;
+import com.twitter.heron.spi.healthmgr.IResolver;
 
 
 public class BackPressurePolicy implements HealthPolicy {
@@ -88,8 +89,10 @@ public class BackPressurePolicy implements HealthPolicy {
     if (limitedParallelismDiagnosis != null) {
       if (!resolverService.isBlackListedAction(topology, "SCALE_UP_RESOLVER",
           limitedParallelismDiagnosis, limitedParallelismDetector)) {
+        double outcomeImprovement = resolverService.estimateResolverOutcome(scaleUpResolver,
+            topology, limitedParallelismDiagnosis);
         resolverService.run(scaleUpResolver, topology, "SCALE_UP_RESOLVER",
-            limitedParallelismDiagnosis);
+            limitedParallelismDiagnosis, outcomeImprovement);
       }
     }
   }
@@ -101,34 +104,35 @@ public class BackPressurePolicy implements HealthPolicy {
     System.out.println("last action " + lastAction);
     switch (lastAction.getAction()) {
       case "DATA_SKEW_RESOLVER": {
-        evaluateAction(dataSkewDetector, lastAction);
+        evaluateAction(dataSkewDetector, null, lastAction);
         break;
       }
       case "SLOW_INSTANCE_RESOLVER":
-        evaluateAction(slowInstanceDetector, lastAction);
+        evaluateAction(slowInstanceDetector, null, lastAction);
         break;
       case "SCALE_UP_RESOLVER":
-        evaluateAction(limitedParallelismDetector, lastAction);
+        evaluateAction(limitedParallelismDetector, scaleUpResolver, lastAction);
         break;
       default:
         break;
     }
   }
+
   @SuppressWarnings("unchecked")
-  private <T extends Bottleneck> void evaluateAction(IDetector<T> detector,
+  private <T extends Bottleneck> void evaluateAction(IDetector<T> detector, IResolver<T> resolver,
                                                      ActionEntry<? extends Bottleneck> lastAction) {
-    Boolean similarDiagnosis = false;
+    Boolean success = false;
     Diagnosis<? extends Bottleneck> newDiagnosis;
     newDiagnosis = detectorService.run(detector, topology);
-    System.out.println(newDiagnosis);
-    if(newDiagnosis != null) {
-      detectorService.similarDiagnosis(detector,
-          (Diagnosis<T>) newDiagnosis,
-          ((ActionEntry<T>) lastAction).getDiagnosis());
-      System.out.println("evaluating");
-      if (similarDiagnosis) {
+    if (newDiagnosis != null) {
+      success = resolverService.isSuccesfulAction(resolver,
+          ((ActionEntry<T>) lastAction).getDiagnosis(), (Diagnosis<T>) newDiagnosis,
+          ((ActionEntry<T>) lastAction).getChange());
+      System.out.println("evaluating" + success);
+      if (!success) {
         System.out.println("bad action");
-        resolverService.addToBlackList(topology, lastAction.getAction(), lastAction.getDiagnosis());
+        resolverService.addToBlackList(topology, lastAction.getAction(), lastAction.getDiagnosis(),
+            ((ActionEntry<T>) lastAction).getChange());
       }
     }
   }

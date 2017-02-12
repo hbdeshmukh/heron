@@ -66,6 +66,6 @@ java_tests(
        "com.twitter.heron.healthmgr.policy.BackPressurePolicyTest",
      ],
      runtime_deps = [ ":healthmgr-tests" ],
-     size = "small",
+     size = "medium",
 )
 

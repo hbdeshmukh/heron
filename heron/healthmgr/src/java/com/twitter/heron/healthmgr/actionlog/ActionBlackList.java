@@ -28,8 +28,8 @@ public class ActionBlackList {
   }
 
   public <T extends Bottleneck> void addToBlackList(String topologyName, String actionTaken,
-                                                   Diagnosis<T> data){
-    ActionEntry<T> action = new ActionEntry<>(actionTaken, data);
+                                                   Diagnosis<T> data, double change){
+    ActionEntry<T> action = new ActionEntry<>(actionTaken, data, change);
     ArrayList<ActionEntry<? extends Bottleneck>> entries = this.blackListedActions.get(topologyName);
     if (entries == null) {
       entries = new ArrayList<>();

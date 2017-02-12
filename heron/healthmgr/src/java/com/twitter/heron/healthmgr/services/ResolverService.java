@@ -15,8 +15,6 @@
 package com.twitter.heron.healthmgr.services;
 
 
-import java.util.concurrent.Callable;
-
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.actionlog.ActionBlackList;
 import com.twitter.heron.healthmgr.actionlog.ActionEntry;
@@ -42,28 +40,45 @@ public class ResolverService {
   }
 
 
-  public <T extends Bottleneck> boolean run(IResolver<T> resolver, TopologyAPI.Topology topology,
-                                            String problem, Diagnosis<T> diagnosis) {
+  public <T extends Bottleneck> double estimateResolverOutcome(IResolver<T> resolver,
+                                                               TopologyAPI.Topology topology,
+                                                               Diagnosis<T> diagnosis) {
+    return resolver.estimateOutcome(diagnosis, topology);
+  }
 
-    log.addAction(topology.getName(), problem, diagnosis);
+
+  public <T extends Bottleneck> boolean run(IResolver<T> resolver, TopologyAPI.Topology topology,
+                                            String problem, Diagnosis<T> diagnosis,
+                                            double outcome) {
+
+    log.addAction(topology.getName(), problem, diagnosis, outcome);
     return resolver.resolve(diagnosis, topology);
   }
 
-  public <T extends Bottleneck> void addToBlackList(TopologyAPI.Topology topology, String actionTaken,
-                                                    Diagnosis<T> data) {
-    blacklist.addToBlackList(topology.getName(), actionTaken, data);
-    System.out.println(blacklist.toString());
+  public <T extends Bottleneck> void addToBlackList(TopologyAPI.Topology topology,
+                                                    String actionTaken,
+                                                    Diagnosis<T> data, double change) {
+    blacklist.addToBlackList(topology.getName(), actionTaken, data, change);
+    System.out.println("blacklist " + blacklist.toString());
+  }
+
+  public <T extends Bottleneck> boolean isSuccesfulAction(IResolver<T> resolver,
+                                                          Diagnosis<T> firstDiagnosis,
+                                                          Diagnosis<T> secondDiagnosis,
+                                                          double change) {
+    return resolver.successfulAction(firstDiagnosis, secondDiagnosis, change);
   }
 
   @SuppressWarnings("unchecked")
-  public <T extends Bottleneck> boolean isBlackListedAction(TopologyAPI.Topology topology, String action,
-                                                            Diagnosis<T> data,
-                                                            IDetector<T> detector){
-    if(blacklist.existsBlackList(topology.getName())){
+  public <T extends Bottleneck> boolean isBlackListedAction(TopologyAPI.Topology topology,
+                                                            String action,
+                                                            Diagnosis<T> diagnosis,
+                                                            IDetector<T> detector) {
+    if (blacklist.existsBlackList(topology.getName())) {
       for (ActionEntry<? extends Bottleneck> actionEntry : blacklist.getTopologyBlackList(
           topology.getName())) {
         if (action.equals(actionEntry.getAction()) &&
-            detector.similarDiagnosis(data, ((ActionEntry<T>) actionEntry).getDiagnosis())) {
+            detector.similarDiagnosis(((ActionEntry<T>) actionEntry).getDiagnosis(), diagnosis)) {
           return true;
         }
       }

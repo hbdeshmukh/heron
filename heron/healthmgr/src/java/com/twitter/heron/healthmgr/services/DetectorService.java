@@ -39,6 +39,7 @@ public class DetectorService {
     return detector.similarDiagnosis(firstDiagnosis, secondDiagnosis);
   }
 
+
   public void close() {
 
   }

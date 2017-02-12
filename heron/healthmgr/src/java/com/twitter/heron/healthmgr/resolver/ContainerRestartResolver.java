@@ -20,11 +20,13 @@ import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.classification.InterfaceAudience;
+import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.scheduler.Scheduler;
 import com.twitter.heron.scheduler.TopologyRuntimeManagementException;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IResolver;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
@@ -74,6 +76,27 @@ public class ContainerRestartResolver implements IResolver<InstanceBottleneck> {
 
     // Clean the connection when we are done.
     LOG.fine("Scheduler updated topology successfully.");
+    return true;
+  }
+
+  /**
+   * Called to compute the expected outcome of the resolver given a diagnosis
+   */
+  @Override
+  public double estimateOutcome(Diagnosis<InstanceBottleneck> diagnosis,
+                                TopologyAPI.Topology topology){
+    return 0;
+  }
+
+
+  /**
+   * Checks whether the newDiagnosis reflects the improvement expected
+   * by resolving the oldDiagnosis
+   */
+  @Override
+  public boolean successfulAction(Diagnosis<InstanceBottleneck> oldDiagnosis,
+                                  Diagnosis<InstanceBottleneck> newDiagnosis,
+                           double improvement){
     return true;
   }
 

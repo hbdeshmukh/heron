@@ -103,6 +103,28 @@ public final class SLAManagerUtils {
     return dataPoints;
   }
 
+  /**
+   * Evaluates whether the instances of the first component are contained
+   * in the set of instances of the second component.
+   *
+   * @param first First component
+   * @param second Second Component
+   * @return true if the second component contains the instances of the first, false otherwise
+   */
+  public static boolean containsInstanceIds(ComponentBottleneck first, ComponentBottleneck second) {
+    ArrayList<InstanceBottleneck> firstInstances = first.getInstances();
+    ArrayList<InstanceBottleneck> secondInstances = second.getInstances();
+
+    for (int i = 0; i < firstInstances.size(); i++) {
+      if (!containsInstanceId(secondInstances,
+          firstInstances.get(i).getInstanceData().getInstanceId())) {
+        return false;
+      }
+    }
+    return true;
+
+  }
+
   public static boolean sameInstanceIds(ComponentBottleneck first, ComponentBottleneck second) {
     ArrayList<InstanceBottleneck> firstInstances = first.getInstances();
     ArrayList<InstanceBottleneck> secondInstances = second.getInstances();
@@ -151,6 +173,31 @@ public final class SLAManagerUtils {
     return true;
   }
 
+  public static boolean improvedMetricSum(ComponentBottleneck first,
+                                         ComponentBottleneck second, String metric,
+                                          double improvement) {
+
+    Double firstMetric = 0.0;
+    Double secondMetric = 0.0;
+    for (int j = 0; j < first.getInstances().size(); j++) {
+      InstanceBottleneck currentInstance = first.getInstances().get(j);
+      firstMetric += Double.parseDouble(
+          currentInstance.getInstanceData().getMetricValue(metric));
+    }
+
+    for (int j = 0; j < second.getInstances().size(); j++) {
+      InstanceBottleneck currentInstance = second.getInstances().get(j);
+      secondMetric += Double.parseDouble(
+          currentInstance.getInstanceData().getMetricValue(metric));
+    }
+    System.out.println(firstMetric + " " + secondMetric + " " + improvement);
+    if (secondMetric > firstMetric && secondMetric >= 0.9 * improvement * firstMetric ) {
+      return true;
+    }
+    return false;
+  }
+
+
   public static boolean similarMetric(ComponentBottleneck first,
                                       ComponentBottleneck second, String metric, int threshold) {
     for (int j = 0; j < first.getInstances().size(); j++) {
@@ -175,6 +222,24 @@ public final class SLAManagerUtils {
         Double secondValue = Double.parseDouble(current.getInstanceData().getMetricValue(metric));
         if (firstValue / secondValue < threshold
             && secondValue / firstValue < threshold) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Returns true if the instances of the first component have more backpressure than
+   * the same instances of the first component.
+   */
+  public static boolean reducedBackPressure(ComponentBottleneck first, ComponentBottleneck second) {
+    for (int j = 0; j < first.getInstances().size(); j++) {
+      int instanceId = first.getInstances().get(j).getInstanceData().getInstanceId();
+      String backPressureValue = first.getInstances().get(j).getInstanceData()
+          .getMetricValue(BACKPRESSURE_METRIC);
+      if (Double.parseDouble(backPressureValue) > 0.0){
+        if(!similarBackPressure(second.getInstances(), instanceId, backPressureValue)){
           return true;
         }
       }

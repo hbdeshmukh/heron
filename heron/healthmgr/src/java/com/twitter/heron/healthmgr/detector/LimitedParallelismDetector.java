@@ -75,21 +75,27 @@ public class LimitedParallelismDetector implements IDetector<ComponentBottleneck
   }
 
   @Override
-  public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
-                                  Diagnosis<ComponentBottleneck> secondDiagnosis) {
+  public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> oldDiagnosis,
+                                  Diagnosis<ComponentBottleneck> newDiagnosis) {
 
-    Set<ComponentBottleneck> firstSummary = firstDiagnosis.getSummary();
-    Set<ComponentBottleneck> secondSummary = secondDiagnosis.getSummary();
-    ComponentBottleneck first = firstSummary.iterator().next();
-    ComponentBottleneck second = secondSummary.iterator().next();
-    if (!first.getComponentName().equals(second.getComponentName())
-        || !SLAManagerUtils.sameInstanceIds(first, second)) {
+    Set<ComponentBottleneck> oldSummary = oldDiagnosis.getSummary();
+    Set<ComponentBottleneck> newSummary = newDiagnosis.getSummary();
+    ComponentBottleneck oldComponent = oldSummary.iterator().next();
+    ComponentBottleneck newComponent = newSummary.iterator().next();
+    System.out.println("old " + oldComponent.toString());
+    System.out.println("new " + newComponent.toString());
+    if (!oldComponent.getComponentName().equals(newComponent.getComponentName())
+        || !SLAManagerUtils.containsInstanceIds(oldComponent, newComponent)) {
+      System.out.println("first");
       return false;
     } else {
-      if (!SLAManagerUtils.similarBackPressure(first, second)) {
+      if (!SLAManagerUtils.similarBackPressure(oldComponent, newComponent)) {
+        System.out.println("second");
         return false;
       }
-      if (!SLAManagerUtils.similarSumMetric(first, second, EXECUTION_COUNT_METRIC, 2)) {
+      if (!SLAManagerUtils.similarSumMetric(oldComponent, newComponent,
+          EXECUTION_COUNT_METRIC, 2)) {
+        System.out.println("third");
         return false;
       }
     }
