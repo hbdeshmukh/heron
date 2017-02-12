@@ -15,6 +15,7 @@
 package com.twitter.heron.healthmgr;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -59,7 +60,6 @@ public class HealthManager {
   private static final Logger LOG = Logger.getLogger(HealthManager.class.getName());
   private final Config config;
   private Config runtime;
-  private HealthPolicy policy;
   private ScheduledExecutorService executor;
   private List<String> healthPolicies;
   private final DetectorService detectorService = new DetectorService();
@@ -251,14 +251,12 @@ public class HealthManager {
     healthManager.initialize();
 
     LOG.info("Starting the SLA manager");
-    List<Future<?>> futures = healthManager.start();
-    for (Future<?> future : futures) {
-      try {
-        future.get();
-      } catch (InterruptedException | ExecutionException e) {
-        healthManager.executor.shutdownNow();
-        throw e;
-      }
+    ScheduledFuture<?> future = healthManager.start();
+    try {
+      future.get();
+    } catch (InterruptedException | ExecutionException e) {
+      healthManager.executor.shutdownNow();
+      throw e;
     }
   }
 
@@ -310,37 +308,69 @@ public class HealthManager {
     return new SchedulerStateManagerAdaptor(statemgr, 5000);
   }
 
-  private List<Future<?>> start() throws ReflectiveOperationException {
-    List<Future<?>> futures = new ArrayList<>();
-    executor = Executors.newScheduledThreadPool(healthPolicies.size());
+  private ScheduledFuture<?> start() {
+    // Create a single threaded executor to avoid concurrent policy execution
+    executor = Executors.newSingleThreadScheduledExecutor();
+    return executor.scheduleWithFixedDelay(new Runnable() {
+      @Override
+      public void run() {
+        class PolicySchedulingInfo {
+          long intervalMills;
+          long lastExecutionTimeMills = 0;
 
-    for (String healthPolicy : healthPolicies) {
-      Map<String, String> policyConfigMap = config.getMapValue(healthPolicy);
-      String policyClass = policyConfigMap.get(Key.HEALTH_POLICY_CLASS.value());
-      long policyInterval = policyConfigMap.get(Key.HEALTH_POLICY_INTERVAL.value()) == null
-          ? Long.MAX_VALUE : Long.valueOf(policyConfigMap.get(Key.HEALTH_POLICY_INTERVAL.value()));
-
-      // provide all policy specific config to the policy for initialization
-      Config.Builder policyConfig = Config.newBuilder().putAll(config);
-      for (String policyConfKey : policyConfigMap.keySet()) {
-        policyConfig.put(policyConfKey, policyConfigMap.get(policyConfKey));
-      }
-
-      LOG.log(Level.INFO, "Policy {0} to be executed every {1} ms",
-          new Object[]{policyClass, policyInterval});
-
-      policy = ReflectionUtils.newInstance(policyClass);
-      policy.initialize(policyConfig.build(), runtime);
-      ScheduledFuture<?> future = executor.scheduleWithFixedDelay(new Runnable() {
-        @Override
-        public void run() {
-          LOG.info("Executing SLA Policy: " + policy.getClass().getSimpleName());
-          policy.execute();
+          public long getDelay() {
+            long currentTime = System.currentTimeMillis();
+            long nextExecutionTime =
+                lastExecutionTimeMills == 0 ? currentTime : lastExecutionTimeMills + intervalMills;
+            return nextExecutionTime - currentTime;
+          }
         }
-      }, 1000, policyInterval, TimeUnit.MILLISECONDS);
-      futures.add(future);
-    }
+        HashMap<HealthPolicy, PolicySchedulingInfo> policySchedule = new HashMap<>();
 
-    return futures;
+        // Load and initialize all the policies
+        for (String healthPolicy : healthPolicies) {
+          Map<String, String> policyConfigMap = config.getMapValue(healthPolicy);
+          String policyClass = policyConfigMap.get(Key.HEALTH_POLICY_CLASS.value());
+          long policyInterval = policyConfigMap.get(Key.HEALTH_POLICY_INTERVAL.value()) == null
+              ? Long.MAX_VALUE : Long.valueOf(policyConfigMap.get(Key.HEALTH_POLICY_INTERVAL.value()));
+
+          // provide all policy specific config to the policy for initialization
+          Config.Builder policyConfig = Config.newBuilder().putAll(config);
+          for (String policyConfKey : policyConfigMap.keySet()) {
+            policyConfig.put(policyConfKey, policyConfigMap.get(policyConfKey));
+          }
+
+          HealthPolicy policy;
+          try {
+            policy = ReflectionUtils.newInstance(policyClass);
+          } catch (ReflectiveOperationException e) {
+            LOG.log(Level.WARNING, "Failed to instantiate HealthPolicy: " + policyClass, e);
+            continue;
+          }
+          policy.initialize(policyConfig.build(), runtime);
+
+          LOG.log(Level.INFO, "Policy {0} initialized and will be executed every {1} ms",
+              new Object[]{policyClass, policyInterval});
+
+          PolicySchedulingInfo policySchedulingInfo = new PolicySchedulingInfo();
+          policySchedulingInfo.intervalMills = policyInterval;
+
+          policySchedule.put(policy, policySchedulingInfo);
+        }
+
+        while (policySchedule.size() > 0) {
+          for (HealthPolicy policy : policySchedule.keySet()) {
+            PolicySchedulingInfo policySchedulingInfo = policySchedule.get(policy);
+            if (policySchedulingInfo.getDelay() > 0) {
+              continue;
+            }
+
+            LOG.info("Executing SLA Policy: " + policy.getClass().getSimpleName());
+            policy.execute();
+            policySchedulingInfo.lastExecutionTimeMills = System.currentTimeMillis();
+          }
+        }
+      }
+    }, 1, 1, TimeUnit.SECONDS);
   }
 }
