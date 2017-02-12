@@ -21,6 +21,7 @@ import java.util.Set;
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.clustering.DiscreteValueClustering;
 import com.twitter.heron.healthmgr.services.DetectorService;
+import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
@@ -72,6 +73,28 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
       }
     }
     return null;
+  }
+
+  @Override
+  public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
+                                  Diagnosis<ComponentBottleneck> secondDiagnosis) {
+
+    Set<ComponentBottleneck> firstSummary = firstDiagnosis.getSummary();
+    Set<ComponentBottleneck> secondSummary = secondDiagnosis.getSummary();
+    ComponentBottleneck first = firstSummary.iterator().next();
+    ComponentBottleneck second = secondSummary.iterator().next();
+    if (!first.getComponentName().equals(second.getComponentName())
+        || !SLAManagerUtils.sameInstanceIds(first, second)) {
+      return false;
+    } else {
+      if (!SLAManagerUtils.similarBackPressure(first, second)) {
+        return false;
+      }
+      if (!SLAManagerUtils.similarMetric(first, second, EXECUTION_COUNT_METRIC, 2)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

@@ -68,6 +68,12 @@ public class ReportingDetector implements IDetector<ComponentBottleneck> {
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
 
+  @Override
+  public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
+                                  Diagnosis<ComponentBottleneck> secondDiagnosis){
+    return true;
+  }
+
   private void updateBottlenecks(Set<ComponentBottleneck> bottlenecks, String component) {
     Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(metric,
         component);

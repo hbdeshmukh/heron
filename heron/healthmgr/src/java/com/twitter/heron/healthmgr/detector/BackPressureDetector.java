@@ -63,6 +63,11 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
 
+  @Override
+  public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
+                                  Diagnosis<ComponentBottleneck> secondDiagnosis){
+    return true;
+  }
 
   private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {
     SchedulerStateManagerAdaptor adaptor = Runtime.schedulerStateManagerAdaptor(runtime);

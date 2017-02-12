@@ -16,11 +16,11 @@ package com.twitter.heron.healthmgr.detector;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.clustering.DiscreteValueClustering;
 import com.twitter.heron.healthmgr.services.DetectorService;
+import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
@@ -75,16 +75,35 @@ public class LimitedParallelismDetector implements IDetector<ComponentBottleneck
   }
 
   @Override
+  public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
+                                  Diagnosis<ComponentBottleneck> secondDiagnosis) {
+
+    Set<ComponentBottleneck> firstSummary = firstDiagnosis.getSummary();
+    Set<ComponentBottleneck> secondSummary = secondDiagnosis.getSummary();
+    ComponentBottleneck first = firstSummary.iterator().next();
+    ComponentBottleneck second = secondSummary.iterator().next();
+    if (!first.getComponentName().equals(second.getComponentName())
+        || !SLAManagerUtils.sameInstanceIds(first, second)) {
+      return false;
+    } else {
+      if (!SLAManagerUtils.similarBackPressure(first, second)) {
+        return false;
+      }
+      if (!SLAManagerUtils.similarSumMetric(first, second, EXECUTION_COUNT_METRIC, 2)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
   public void close() {
     backpressureDetector.close();
     executeCountDetector.close();
   }
 
   private boolean existsLimitedParallelism(ComponentBottleneck current) {
-    Double[] backPressureDataPoints = current.getDataPoints(BACKPRESSURE_METRIC);
-    DiscreteValueClustering clustering = new DiscreteValueClustering();
-    HashMap<String, ArrayList<Integer>> backPressureClusters =
-        clustering.createBinaryClusters(backPressureDataPoints, 0.0);
+    HashMap<String, ArrayList<Integer>> backPressureClusters = createBackPressureClusters(current);
 
     int clusterAt0 = backPressureClusters.get("0.0") == null
         ? 0 : backPressureClusters.get("0.0").size();
@@ -99,6 +118,13 @@ public class LimitedParallelismDetector implements IDetector<ComponentBottleneck
       return true;
     }
     return false;
+  }
+
+  private HashMap<String, ArrayList<Integer>> createBackPressureClusters(
+      ComponentBottleneck current) {
+    Double[] backPressureDataPoints = current.getDataPoints(BACKPRESSURE_METRIC);
+    DiscreteValueClustering clustering = new DiscreteValueClustering();
+    return clustering.createBinaryClusters(backPressureDataPoints, 0.0);
   }
 
   private int compareExecuteCounts(ComponentBottleneck bottleneck) {

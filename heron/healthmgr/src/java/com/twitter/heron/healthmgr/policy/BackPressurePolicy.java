@@ -29,6 +29,7 @@ import com.twitter.heron.spi.healthmgr.Bottleneck;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.HealthPolicy;
+import com.twitter.heron.spi.healthmgr.IDetector;
 
 
 public class BackPressurePolicy implements HealthPolicy {
@@ -60,31 +61,77 @@ public class BackPressurePolicy implements HealthPolicy {
 
   @Override
   public void execute() {
-    ActionEntry<? extends Bottleneck> lastAction = resolverService.getLog()
-        .getLastAction(topology.getName());
-    System.out.println("last action " + lastAction);
-    Diagnosis<ComponentBottleneck> dataSkewDiagnosis =
-        detectorService.run(dataSkewDetector, topology);
-
-    if (dataSkewDiagnosis != null) {
-
-    }
 
     Diagnosis<ComponentBottleneck> slowInstanceDiagnosis =
         detectorService.run(slowInstanceDetector, topology);
 
     if (slowInstanceDiagnosis != null) {
+      if (!resolverService.isBlackListedAction(topology, "SLOW_INSTANCE_RESOLVER",
+          slowInstanceDiagnosis, slowInstanceDetector)) {
 
+      }
     }
+
+    Diagnosis<ComponentBottleneck> dataSkewDiagnosis =
+        detectorService.run(dataSkewDetector, topology);
+
+    if (dataSkewDiagnosis != null) {
+      if (!resolverService.isBlackListedAction(topology, "DATA_SKEW_RESOLVER",
+          dataSkewDiagnosis, dataSkewDetector)) {
+
+      }
+    }
+
     Diagnosis<ComponentBottleneck> limitedParallelismDiagnosis =
         detectorService.run(limitedParallelismDetector, topology);
 
     if (limitedParallelismDiagnosis != null) {
-      resolverService.run(scaleUpResolver, topology,
-          "LIMITED_PARALLELISM", limitedParallelismDiagnosis);
+      if (!resolverService.isBlackListedAction(topology, "SCALE_UP_RESOLVER",
+          limitedParallelismDiagnosis, limitedParallelismDetector)) {
+        resolverService.run(scaleUpResolver, topology, "SCALE_UP_RESOLVER",
+            limitedParallelismDiagnosis);
+      }
     }
   }
 
+  @Override
+  public void evaluate() {
+    ActionEntry<? extends Bottleneck> lastAction = resolverService.getLog()
+        .getLastAction(topology.getName());
+    System.out.println("last action " + lastAction);
+    switch (lastAction.getAction()) {
+      case "DATA_SKEW_RESOLVER": {
+        evaluateAction(dataSkewDetector, lastAction);
+        break;
+      }
+      case "SLOW_INSTANCE_RESOLVER":
+        evaluateAction(slowInstanceDetector, lastAction);
+        break;
+      case "SCALE_UP_RESOLVER":
+        evaluateAction(limitedParallelismDetector, lastAction);
+        break;
+      default:
+        break;
+    }
+  }
+  @SuppressWarnings("unchecked")
+  private <T extends Bottleneck> void evaluateAction(IDetector<T> detector,
+                                                     ActionEntry<? extends Bottleneck> lastAction) {
+    Boolean similarDiagnosis = false;
+    Diagnosis<? extends Bottleneck> newDiagnosis;
+    newDiagnosis = detectorService.run(detector, topology);
+    System.out.println(newDiagnosis);
+    if(newDiagnosis != null) {
+      detectorService.similarDiagnosis(detector,
+          (Diagnosis<T>) newDiagnosis,
+          ((ActionEntry<T>) lastAction).getDiagnosis());
+      System.out.println("evaluating");
+      if (similarDiagnosis) {
+        System.out.println("bad action");
+        resolverService.addToBlackList(topology, lastAction.getAction(), lastAction.getDiagnosis());
+      }
+    }
+  }
 
   @Override
   public void close() {

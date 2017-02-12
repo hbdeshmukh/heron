@@ -30,6 +30,12 @@ public interface IDetector<T extends Bottleneck> extends AutoCloseable {
   Diagnosis<T> detect(TopologyAPI.Topology topology);
 
   /**
+   * Called by detector to compare two Diagnosis objects.
+   * Returns false if the objects are considered different, true otherwise
+   */
+  boolean similarDiagnosis(Diagnosis<T> firstDiagnosis, Diagnosis<T> secondDiagnosis);
+
+  /**
    * This is to for disposing or cleaning up any internal state accumulated by
    * the detector.
    */

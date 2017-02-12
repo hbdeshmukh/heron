@@ -29,6 +29,11 @@ public interface HealthPolicy extends AutoCloseable {
   void execute();
 
   /**
+   * It evaluates whether the last policy action produced the expected outcome.
+   */
+  void evaluate();
+
+  /**
    * Close the SLA policy
    */
   void close();

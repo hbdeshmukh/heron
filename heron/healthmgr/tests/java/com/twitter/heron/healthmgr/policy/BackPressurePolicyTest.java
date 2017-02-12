@@ -96,5 +96,8 @@ public class BackPressurePolicyTest {
     policy.initialize(config, runtime);
 
     policy.execute();
+
+    for(int i = 0 ; i < 10; i++)
+    policy.evaluate();
   }
 }

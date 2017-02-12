@@ -20,11 +20,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
+import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
 
 public final class SLAManagerUtils {
+
+  private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
 
   private SLAManagerUtils() {
 
@@ -100,6 +103,115 @@ public final class SLAManagerUtils {
     return dataPoints;
   }
 
+  public static boolean sameInstanceIds(ComponentBottleneck first, ComponentBottleneck second) {
+    ArrayList<InstanceBottleneck> firstInstances = first.getInstances();
+    ArrayList<InstanceBottleneck> secondInstances = second.getInstances();
 
+    if (firstInstances.size() != secondInstances.size()) {
+      return false;
+    } else {
+      for (int i = 0; i < firstInstances.size(); i++) {
+        if (!containsInstanceId(secondInstances,
+            firstInstances.get(i).getInstanceData().getInstanceId())) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+
+  public static boolean containsInstanceId(ArrayList<InstanceBottleneck> instances,
+                                           int instanceId) {
+    for (int i = 0; i < instances.size(); i++) {
+      if (instances.get(i).getInstanceData().getInstanceId() == instanceId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static boolean similarSumMetric(ComponentBottleneck first,
+                                         ComponentBottleneck second, String metric, int threshold) {
+    Double firstMetric = 0.0;
+    Double secondMetric = 0.0;
+    for (int j = 0; j < first.getInstances().size(); j++) {
+      InstanceBottleneck currentInstance = first.getInstances().get(j);
+      firstMetric += Double.parseDouble(
+          currentInstance.getInstanceData().getMetricValue(metric));
+    }
+
+    for (int j = 0; j < second.getInstances().size(); j++) {
+      InstanceBottleneck currentInstance = second.getInstances().get(j);
+      secondMetric += Double.parseDouble(
+          currentInstance.getInstanceData().getMetricValue(metric));
+    }
+    if (firstMetric / secondMetric > threshold || secondMetric / firstMetric > threshold) {
+      return false;
+    }
+    return true;
+  }
+
+  public static boolean similarMetric(ComponentBottleneck first,
+                                      ComponentBottleneck second, String metric, int threshold) {
+    for (int j = 0; j < first.getInstances().size(); j++) {
+      int instanceId = first.getInstances().get(j).getInstanceData().getInstanceId();
+      String firstValue = first.getInstances().get(j).getInstanceData()
+          .getMetricValue(metric);
+      if (!similarMetric(second.getInstances(), metric, instanceId, firstValue, threshold)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean similarMetric(ArrayList<InstanceBottleneck> instances, String metric,
+                                       int instanceId, String value, int threshold) {
+    boolean found = false;
+    for (int i = 0; i < instances.size() && !found; i++) {
+      InstanceBottleneck current = instances.get(i);
+      if (current.getInstanceData().getInstanceId() == instanceId) {
+        found = true;
+        Double firstValue = Double.parseDouble(value);
+        Double secondValue = Double.parseDouble(current.getInstanceData().getMetricValue(metric));
+        if (firstValue / secondValue < threshold
+            && secondValue / firstValue < threshold) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  public static boolean similarBackPressure(ComponentBottleneck first, ComponentBottleneck second) {
+    for (int j = 0; j < first.getInstances().size(); j++) {
+      int instanceId = first.getInstances().get(j).getInstanceData().getInstanceId();
+      String backPressureValue = first.getInstances().get(j).getInstanceData()
+          .getMetricValue(BACKPRESSURE_METRIC);
+      if (!similarBackPressure(second.getInstances(), instanceId, backPressureValue)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean similarBackPressure(ArrayList<InstanceBottleneck> instances,
+                                             int instanceId, String backPressureValue) {
+    boolean found = false;
+    for (int i = 0; i < instances.size() && !found; i++) {
+      InstanceBottleneck current = instances.get(i);
+      if (current.getInstanceData().getInstanceId() == instanceId) {
+        found = true;
+        if (Double.parseDouble(current.getInstanceData().getMetricValue(BACKPRESSURE_METRIC)) > 0
+            && Double.parseDouble(backPressureValue) > 0) {
+          return true;
+        }
+        if (Double.parseDouble(current.getInstanceData().getMetricValue(BACKPRESSURE_METRIC)) == 0
+            && Double.parseDouble(backPressureValue) == 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
 }

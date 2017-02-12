@@ -89,6 +89,12 @@ public class SkewDetector extends ThresholdBasedDetector<ComponentBottleneck> {
 
 
   @Override
+  public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
+                                  Diagnosis<ComponentBottleneck> secondDiagnosis){
+    return true;
+  }
+
+  @Override
   public void close() {
   }
 

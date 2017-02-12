@@ -74,6 +74,12 @@ public class SlowInstanceDetector implements IDetector<ComponentBottleneck> {
   }
 
   @Override
+  public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
+                                  Diagnosis<ComponentBottleneck> secondDiagnosis){
+    return true;
+  }
+
+  @Override
   public void close() {
     backpressureDetector.close();
     executeCountDetector.close();

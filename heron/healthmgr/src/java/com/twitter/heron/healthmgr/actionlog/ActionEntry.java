@@ -14,7 +14,6 @@
 package com.twitter.heron.healthmgr.actionlog;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 
 import com.twitter.heron.spi.healthmgr.Bottleneck;
@@ -22,16 +21,14 @@ import com.twitter.heron.spi.healthmgr.Diagnosis;
 
 public class ActionEntry<T extends Bottleneck> {
   private String actionTime;
-  private String problem;
-  private ArrayList<String> possibleProblems;
+  private String action;
   private Diagnosis<T> diagnosis;
 
-  public ActionEntry(String problem, ArrayList<String> possibleProblems,
+  public ActionEntry(String actionTaken,
                      Diagnosis<T> data) {
     this.actionTime = new SimpleDateFormat("yyyyMMdd_HHmmss")
         .format(Calendar.getInstance().getTime());
-    this.problem = problem;
-    this.possibleProblems = possibleProblems;
+    this.action = actionTaken;
     this.diagnosis = data;
   }
 
@@ -39,30 +36,19 @@ public class ActionEntry<T extends Bottleneck> {
     return actionTime;
   }
 
-  public String getProblem() {
-    return problem;
+  public String getAction() {
+    return action;
   }
 
-  public ArrayList<String> getPossibleProblems() {
-    return possibleProblems;
-  }
 
   public Diagnosis<T> getDiagnosis() {
     return diagnosis;
   }
 
   public String toString() {
-    if (possibleProblems == null) {
-      return "[ActionTime: " + actionTime
-          + " Problem: " + problem
-          + " Diagnosis: " + diagnosis.toString()
-          + "]";
-    } else {
-      return "[ActionTime: " + actionTime
-          + " Problem: " + problem
-          + " Possible problems: " + possibleProblems.toString()
-          + " Diagnosis: " + diagnosis.toString()
-          + "]";
-    }
+    return "[ActionTime: " + actionTime
+        + " Action: " + action
+        + " Diagnosis: " + diagnosis.toString()
+        + "]";
   }
 }

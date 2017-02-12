@@ -33,6 +33,12 @@ public class DetectorService {
     return detector.detect(topology);
   }
 
+  public <T extends Bottleneck> boolean similarDiagnosis(IDetector<T> detector,
+                                                         Diagnosis<T> firstDiagnosis,
+                                                         Diagnosis<T> secondDiagnosis) {
+    return detector.similarDiagnosis(firstDiagnosis, secondDiagnosis);
+  }
+
   public void close() {
 
   }
