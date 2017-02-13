@@ -31,6 +31,7 @@ import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IResolver;
+import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 import com.twitter.heron.spi.packing.IRepacking;
 import com.twitter.heron.spi.packing.PackingPlan;
@@ -60,8 +61,6 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
   @Override
   public Boolean resolve(Diagnosis<ComponentBottleneck> diagnosis, TopologyAPI.Topology topology) {
-
-
     ComponentBottleneck bottleneck = diagnosis.getSummary().iterator().next();
     String componentName = bottleneck.getComponentName();
 
@@ -95,39 +94,44 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     return true;
 
   }
-   @Override
-   public double estimateOutcome(Diagnosis<ComponentBottleneck> diagnosis,
-                                         TopologyAPI.Topology topology){
-     if (diagnosis.getSummary() == null) {
-       throw new RuntimeException("Not valid diagnosis object");
-     }
 
-     ComponentBottleneck current = diagnosis.getSummary().iterator().next();
-     double scaleFactor = computeScaleUpFactor(current);
-     this.newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
-
-     if (this.newParallelism == 0) {
-       throw new RuntimeException("New parallelism after scale up is 0."
-           + " Please set the parallelism value");
-     }
-     return scaleFactor;
-   }
-
-    private double computeScaleUpFactor(ComponentBottleneck current) {
-
-    double executeCountSum = BottleneckUtils.computeSum(current, EXECUTION_COUNT_METRIC);
-
-    double maxSum = 0;
-    for (int i = 0; i < current.getInstances().size(); i++) {
-      double backpressureTime = Double.parseDouble(
-          current.getInstances().get(i).getDataPoint(BACKPRESSURE_METRIC));
-      double executeCount = Double.parseDouble(
-          current.getInstances().get(i).getDataPoint(EXECUTION_COUNT_METRIC));
-      maxSum += (1 + backpressureTime / 60000) * executeCount;
-      System.out.println(i + " backpressure " + backpressureTime + " execute: " + executeCount
-          + " " + (1 + backpressureTime / 60000) * executeCount + " " + maxSum);
+  @Override
+  public double estimateOutcome(Diagnosis<ComponentBottleneck> diagnosis,
+                                TopologyAPI.Topology topology) {
+    if (diagnosis.getSummary() == null) {
+      throw new RuntimeException("Not valid diagnosis object");
     }
-    return maxSum / executeCountSum;
+
+    ComponentBottleneck current = diagnosis.getSummary().iterator().next();
+    this.newParallelism = computeScaleUpFactor(current);
+
+    if (this.newParallelism == 0) {
+      throw new RuntimeException("New parallelism after scale up is 0");
+    }
+    return this.newParallelism;
+  }
+
+  private int computeScaleUpFactor(ComponentBottleneck current) {
+    double totalBackpressureTime = 0;
+    for (InstanceBottleneck instanceData : current.getInstances()) {
+      int backpressureTime = Integer.valueOf(instanceData.getDataPoint(BACKPRESSURE_METRIC));
+      LOG.log(Level.INFO, "Instance: {0}, back-pressure: {1}",
+          new Object[]{instanceData.getInstanceData().getInstanceId(), backpressureTime});
+      totalBackpressureTime += backpressureTime;
+    }
+
+    if (totalBackpressureTime > 60000) {
+      totalBackpressureTime = 59999;
+      LOG.log(Level.WARNING, "Invalid total back-pressure time (> 60s): " + totalBackpressureTime);
+    }
+    LOG.info("Total back-pressure: " + totalBackpressureTime);
+
+    double unusedCapacity = (1.0 * totalBackpressureTime) / (60000 - totalBackpressureTime);
+    // scale up fencing: do not scale more than 4 times the current size
+    unusedCapacity = unusedCapacity > 4.0 ? 4.0 : unusedCapacity;
+    LOG.info("Unused capacity: {1}" + unusedCapacity);
+
+    return (int) Math.ceil(current.getInstances().size() * (1 + unusedCapacity));
   }
 
   @Override
