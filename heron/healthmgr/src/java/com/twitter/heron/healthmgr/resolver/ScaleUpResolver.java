@@ -129,7 +129,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     double unusedCapacity = (1.0 * totalBackpressureTime) / (60000 - totalBackpressureTime);
     // scale up fencing: do not scale more than 4 times the current size
     unusedCapacity = unusedCapacity > 4.0 ? 4.0 : unusedCapacity;
-    LOG.info("Unused capacity: {1}" + unusedCapacity);
+    LOG.info("Unused capacity: " + unusedCapacity);
 
     return (int) Math.ceil(current.getInstances().size() * (1 + unusedCapacity));
   }

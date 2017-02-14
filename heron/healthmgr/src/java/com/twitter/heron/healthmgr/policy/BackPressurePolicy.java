@@ -69,7 +69,6 @@ public class BackPressurePolicy implements HealthPolicy {
     if (slowInstanceDiagnosis != null) {
       if (!resolverService.isBlackListedAction(topology, "SLOW_INSTANCE_RESOLVER",
           slowInstanceDiagnosis, slowInstanceDetector)) {
-
       }
     }
 

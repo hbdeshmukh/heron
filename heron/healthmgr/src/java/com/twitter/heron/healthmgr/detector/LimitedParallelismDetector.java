@@ -13,12 +13,9 @@
 // limitations under the License.
 package com.twitter.heron.healthmgr.detector;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Set;
 
 import com.twitter.heron.api.generated.TopologyAPI;
-import com.twitter.heron.healthmgr.clustering.DiscreteValueClustering;
 import com.twitter.heron.healthmgr.services.DetectorService;
 import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.scheduler.utils.Runtime;
@@ -26,12 +23,10 @@ import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IDetector;
-import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 
 public class LimitedParallelismDetector implements IDetector<ComponentBottleneck> {
 
-  private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
 
   private Config runtime;
@@ -109,57 +104,6 @@ public class LimitedParallelismDetector implements IDetector<ComponentBottleneck
   }
 
   private boolean existsLimitedParallelism(ComponentBottleneck current) {
-    HashMap<String, ArrayList<Integer>> backPressureClusters = createBackPressureClusters(current);
-
-    int clusterAt0 = backPressureClusters.get("0.0") == null
-        ? 0 : backPressureClusters.get("0.0").size();
-    int clusterAt1 = backPressureClusters.get("1.0") == null
-        ? 0 : backPressureClusters.get("1.0").size();
-
-    if (clusterAt1 < (10 * clusterAt0) / 100) {
-      if (compareExecuteCounts(current) == 0) {
-        return true;
-      }
-    } else {
-      return true;
-    }
-    return false;
-  }
-
-  private HashMap<String, ArrayList<Integer>> createBackPressureClusters(
-      ComponentBottleneck current) {
-    Double[] backPressureDataPoints = current.getDataPoints(BACKPRESSURE_METRIC);
-    DiscreteValueClustering clustering = new DiscreteValueClustering();
-    return clustering.createBinaryClusters(backPressureDataPoints, 0.0);
-  }
-
-  private int compareExecuteCounts(ComponentBottleneck bottleneck) {
-
-    double backPressureExecuteCounts = 0;
-    double nonBackPressureExecuteCounts = 0;
-    int noBackPressureInstances = 0;
-    for (int j = 0; j < bottleneck.getInstances().size(); j++) {
-      InstanceBottleneck currentInstance = bottleneck.getInstances().get(j);
-      if (!currentInstance.getInstanceData().getMetricValue(BACKPRESSURE_METRIC).equals("0.0")) {
-        backPressureExecuteCounts += Double.parseDouble(
-            currentInstance.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC));
-        noBackPressureInstances++;
-      } else {
-        nonBackPressureExecuteCounts += Double.parseDouble(
-            currentInstance.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC));
-      }
-    }
-    int noNonBackPressureInstances = bottleneck.getInstances().size() - noBackPressureInstances;
-    if (backPressureExecuteCounts / noBackPressureInstances > 2 * (
-        nonBackPressureExecuteCounts / noNonBackPressureInstances)) {
-      return 1;
-    } else {
-      if (backPressureExecuteCounts / noBackPressureInstances < 0.5 * (
-          nonBackPressureExecuteCounts / noNonBackPressureInstances)) {
-        return -1;
-      } else {
-        return 0;
-      }
-    }
+    return DataSkewDetector.compareExecuteCounts(current) == 0;
   }
 }

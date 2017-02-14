@@ -71,6 +71,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
     return true;
   }
 
+  // TODO avoid overloading state store by accepting the packing plan from the runtime
   private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {
     SchedulerStateManagerAdaptor adaptor = Runtime.schedulerStateManagerAdaptor(runtime);
 

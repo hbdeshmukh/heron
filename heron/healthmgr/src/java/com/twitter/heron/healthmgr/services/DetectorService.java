@@ -25,7 +25,6 @@ public class DetectorService {
   }
 
   public void initialize(Config config, Config runtime) {
-
   }
 
   public <T extends Bottleneck> Diagnosis<T> run(IDetector<T> detector,
@@ -41,6 +40,5 @@ public class DetectorService {
 
 
   public void close() {
-
   }
 }
