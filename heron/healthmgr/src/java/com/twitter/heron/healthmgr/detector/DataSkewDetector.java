@@ -121,7 +121,7 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
       double executionCount =
           Double.parseDouble(instanceData.getMetricValue(EXECUTION_COUNT_METRIC));
       LOG.log(Level.INFO, "Instance: {0}, executeCount: {1}",
-          new Object[]{instanceData.getInstanceId(), executionCount});
+          new Object[]{instanceData.getInstanceNameId(), executionCount});
       if (instanceData.getMetricValue(BACKPRESSURE_METRIC).equals("0.0")) {
         sumNonBPExecuteCounts += executionCount;
       } else {

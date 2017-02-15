@@ -57,6 +57,7 @@ public final class ConfigLoader {
         .putAll(defaultConfig)
         .putAll(loadConfig(Context.clusterFile(localConfig)))
         .putAll(loadConfig(Context.clientFile(localConfig)))
+        .putAll(loadConfig(Context.healthManagerFile(localConfig)))
         .putAll(loadConfig(Context.packingFile(localConfig)))
         .putAll(loadConfig(Context.schedulerFile(localConfig)))
         .putAll(loadConfig(Context.stateManagerFile(localConfig)))

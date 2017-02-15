@@ -23,7 +23,9 @@ import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
+import com.twitter.heron.spi.packing.InstanceId;
 import com.twitter.heron.spi.packing.PackingPlan;
+import com.twitter.heron.spi.packing.PackingPlan.InstancePlan;
 
 public final class SLAManagerUtils {
 
@@ -45,17 +47,16 @@ public final class SLAManagerUtils {
         if (metricValue == null) {
           continue;
         }
-        MetricsInfo metric = new MetricsInfo(metricName, metricValue);
-        ComponentBottleneck currentBottleneck;
-        if (!results.containsKey(instancePlan.getComponentName())) {
+
+        ComponentBottleneck currentBottleneck = results.get(instancePlan.getComponentName());
+        if (currentBottleneck == null) {
           currentBottleneck = new ComponentBottleneck(instancePlan.getComponentName());
-        } else {
-          currentBottleneck = results.get(instancePlan.getComponentName());
         }
+
         Set<MetricsInfo> metrics = new HashSet<>();
+        MetricsInfo metric = new MetricsInfo(metricName, metricValue);
         metrics.add(metric);
-        currentBottleneck.add(containerPlan.getId(),
-            instancePlan.getTaskId(), metrics);
+        currentBottleneck.add(containerPlan.getId(), instancePlan, metrics);
         results.put(instancePlan.getComponentName(), currentBottleneck);
       }
     }
@@ -89,8 +90,9 @@ public final class SLAManagerUtils {
     String[] parts = metricsInfo.getName().split("_");
     Set<MetricsInfo> metrics = new HashSet<>();
     metrics.add(new MetricsInfo(metricName, metricsInfo.getValue()));
-    currentBottleneck.add(Integer.parseInt(parts[1]),
-        Integer.parseInt(parts[3]), metrics);
+    InstancePlan instance =
+        new InstancePlan(new InstanceId(parts[2], Integer.parseInt(parts[3]), 0), null);
+    currentBottleneck.add(Integer.parseInt(parts[1]), instance, metrics);
   }
 
   public static Double[] getDoubleDataPoints(Iterable<MetricsInfo> metricsResults) {

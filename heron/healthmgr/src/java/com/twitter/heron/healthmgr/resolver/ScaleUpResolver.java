@@ -116,7 +116,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     for (InstanceBottleneck instanceData : current.getInstances()) {
       int backpressureTime = Integer.valueOf(instanceData.getDataPoint(BACKPRESSURE_METRIC));
       LOG.log(Level.INFO, "Instance: {0}, back-pressure: {1}",
-          new Object[]{instanceData.getInstanceData().getInstanceId(), backpressureTime});
+          new Object[]{instanceData.getInstanceData().getInstanceNameId(), backpressureTime});
       totalBackpressureTime += backpressureTime;
     }
 

@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.Set;
 
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
+import com.twitter.heron.spi.packing.InstanceId;
+import com.twitter.heron.spi.packing.PackingPlan.InstancePlan;
 
 public class ComponentBottleneck extends Bottleneck {
   private String componentName;
@@ -28,8 +30,8 @@ public class ComponentBottleneck extends Bottleneck {
     this.instances = new ArrayList<>();
   }
 
-  public void add(int containerId, int instanceId, Set<MetricsInfo> metrics) {
-    instances.add(new InstanceBottleneck(containerId, instanceId, metrics));
+  public void add(int containerId, InstancePlan instance, Set<MetricsInfo> metrics) {
+    instances.add(new InstanceBottleneck(containerId, instance, metrics));
   }
 
 

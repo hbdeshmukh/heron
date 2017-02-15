@@ -38,4 +38,11 @@ public class Diagnosis<T extends Bottleneck> {
   public void addToDiagnosis(T item) {
     summary.add(item);
   }
+
+  @Override
+  public String toString() {
+    return "Diagnosis{" +
+        "summary=" + summary +
+        '}';
+  }
 }

@@ -16,21 +16,26 @@ package com.twitter.heron.spi.healthmgr;
 import java.util.Set;
 
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
+import com.twitter.heron.spi.packing.PackingPlan.InstancePlan;
 
 
 public class InstanceInfo {
+  private final InstancePlan instance;
   private int containerId;
-  private int instanceId;
   private Set<MetricsInfo> metrics;
 
-  public InstanceInfo(int containerId, int instanceId, Set<MetricsInfo> metricValues) {
+  public InstanceInfo(int containerId, InstancePlan instance, Set<MetricsInfo> metrics) {
     this.containerId = containerId;
-    this.instanceId = instanceId;
-    this.metrics = metricValues;
+    this.instance = instance;
+    this.metrics = metrics;
   }
 
   public int getInstanceId() {
-    return instanceId;
+    return instance.getTaskId();
+  }
+
+  public String getInstanceNameId() {
+    return instance.getComponentName() + ":" + instance.getTaskId();
   }
 
   public int getContainerId() {
@@ -46,8 +51,8 @@ public class InstanceInfo {
   }
 
   public String toString() {
-    return String.format("Instance %d in container %d has metric value %s", instanceId, containerId,
-        metrics.toString());
+    return String.format("Instance %s in container %d has metric value %s",
+        getInstanceNameId(), containerId, metrics.toString());
   }
 
   public boolean contains(String metric, String value) {
