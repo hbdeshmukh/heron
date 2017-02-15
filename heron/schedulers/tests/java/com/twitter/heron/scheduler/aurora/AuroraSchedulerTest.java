@@ -43,7 +43,7 @@ import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.SubmitterMain;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
-import com.twitter.heron.spi.common.Misc;
+import com.twitter.heron.spi.common.TokenSub;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.Resource;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
@@ -61,7 +61,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(Misc.class)
+@PrepareForTest({TokenSub.class, Config.class})
 public class AuroraSchedulerTest {
   private static final String AURORA_PATH = "path.aurora";
   private static final String PACKING_PLAN_ID = "packing.plan.id";
@@ -104,6 +104,9 @@ public class AuroraSchedulerTest {
     when(runtime.getStringValue(Key.TOPOLOGY_NAME)).thenReturn(TOPOLOGY_NAME);
 
     Config mConfig = Mockito.mock(Config.class);
+    PowerMockito.mockStatic(Config.class);
+    when(Config.toClusterMode(mConfig)).thenReturn(mConfig);
+
     when(mConfig.getStringValue(eq(AuroraContext.JOB_TEMPLATE),
         anyString())).thenReturn(AURORA_PATH);
 
@@ -149,9 +152,13 @@ public class AuroraSchedulerTest {
 
   @Test
   public void testOnKill() throws Exception {
+    Config mockConfig = Mockito.mock(Config.class);
+    PowerMockito.mockStatic(Config.class);
+    when(Config.toClusterMode(mockConfig)).thenReturn(mockConfig);
+
     AuroraController controller = Mockito.mock(AuroraController.class);
     doReturn(controller).when(scheduler).getController();
-    scheduler.initialize(Mockito.mock(Config.class), Mockito.mock(Config.class));
+    scheduler.initialize(mockConfig, Mockito.mock(Config.class));
 
     // Failed to kill job via controller
     doReturn(false).when(controller).killJob();
@@ -166,9 +173,13 @@ public class AuroraSchedulerTest {
 
   @Test
   public void testOnRestart() throws Exception {
+    Config mockConfig = Mockito.mock(Config.class);
+    PowerMockito.mockStatic(Config.class);
+    when(Config.toClusterMode(mockConfig)).thenReturn(mockConfig);
+
     AuroraController controller = Mockito.mock(AuroraController.class);
     doReturn(controller).when(scheduler).getController();
-    scheduler.initialize(Mockito.mock(Config.class), Mockito.mock(Config.class));
+    scheduler.initialize(mockConfig, Mockito.mock(Config.class));
 
     // Construct the RestartTopologyRequest
     int containerToRestart = 1;
@@ -199,11 +210,14 @@ public class AuroraSchedulerTest {
     when(mockConfig.getStringValue(AuroraContext.JOB_LINK_TEMPLATE))
         .thenReturn(JOB_LINK_FORMAT);
 
+    PowerMockito.mockStatic(Config.class);
+    when(Config.toClusterMode(mockConfig)).thenReturn(mockConfig);
+
     scheduler.initialize(mockConfig, Mockito.mock(Config.class));
 
-    PowerMockito.spy(Misc.class);
+    PowerMockito.spy(TokenSub.class);
     PowerMockito.doReturn(SUBSTITUTED_JOB_LINK)
-        .when(Misc.class, "substitute", mockConfig, JOB_LINK_FORMAT);
+        .when(TokenSub.class, "substitute", mockConfig, JOB_LINK_FORMAT);
 
     List<String> result = scheduler.getJobLinks();
 
@@ -248,6 +262,7 @@ public class AuroraSchedulerTest {
     String expectedConf = "./heron-conf";
     String expectedBin = "./heron-core/bin";
     String expectedLib = "./heron-core/lib";
+    String expectedDist = "./heron-core/dist";
     for (AuroraField field : AuroraField.values()) {
       boolean asserted = false;
       Object expected = null;
@@ -272,7 +287,7 @@ public class AuroraSchedulerTest {
           expected = "\"\"";
           break;
         case CORE_PACKAGE_URI:
-          expected = "/some/heron/home/dist/heron-core.tar.gz";
+          expected = expectedDist + "/heron-core.tar.gz";
           break;
         case CPUS_PER_CONTAINER:
           expected = Double.valueOf(containerResource.getCpu()).toString();
@@ -283,45 +298,44 @@ public class AuroraSchedulerTest {
         case RAM_PER_CONTAINER:
           expected = Long.valueOf(containerResource.getRam().asBytes()).toString();
           break;
-        case HERON_SANDBOX_JAVA_HOME:
+        case JAVA_HOME:
           expected = "/usr/lib/jvm/default-java";
           break;
-        case ISPRODUCTION:
         case IS_PRODUCTION:
           expected = Boolean.FALSE.toString();
           break;
         case NUM_CONTAINERS:
           expected = "2";
           break;
-        case SANDBOX_EXECUTOR_BINARY:
+        case EXECUTOR_BINARY:
           expected = expectedBin + "/heron-executor";
           break;
-        case SANDBOX_INSTANCE_CLASSPATH:
+        case INSTANCE_CLASSPATH:
           expected = expectedLib + "/instance/*";
           break;
-        case SANDBOX_METRICSMGR_CLASSPATH:
+        case METRICSMGR_CLASSPATH:
           expected = expectedLib + "/metricsmgr/*";
           break;
-        case SANDBOX_METRICS_YAML:
+        case METRICS_YAML:
           expected = expectedConf + "/metrics_sinks.yaml";
           break;
-        case SANDBOX_PYTHON_INSTANCE_BINARY:
+        case PYTHON_INSTANCE_BINARY:
           expected = expectedBin + "/heron-python-instance";
           break;
-        case SANDBOX_SCHEDULER_CLASSPATH:
+        case SCHEDULER_CLASSPATH:
           expected =
               expectedLib + "/scheduler/*:./heron-core/lib/packing/*:./heron-core/lib/statemgr/*";
           break;
-        case SANDBOX_SHELL_BINARY:
+        case SHELL_BINARY:
           expected = expectedBin + "/heron-shell";
           break;
-        case SANDBOX_STMGR_BINARY:
+        case STMGR_BINARY:
           expected = expectedBin + "/heron-stmgr";
           break;
-        case SANDBOX_TMASTER_BINARY:
+        case TMASTER_BINARY:
           expected = expectedBin + "/heron-tmaster";
           break;
-        case SANDBOX_SYSTEM_YAML:
+        case SYSTEM_YAML:
           expected = expectedConf + "/heron_internals.yaml";
           break;
         case TOPOLOGY_BINARY_FILE:

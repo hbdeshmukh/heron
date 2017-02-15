@@ -14,13 +14,11 @@
 
 package com.twitter.heron.healthmgr;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -42,8 +40,8 @@ import com.twitter.heron.healthmgr.services.ResolverService;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
 import com.twitter.heron.scheduler.client.SchedulerClientFactory;
-import com.twitter.heron.spi.common.ClusterConfig;
 import com.twitter.heron.spi.common.Config;
+import com.twitter.heron.spi.common.ConfigLoader;
 import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.healthmgr.HealthPolicy;
@@ -235,8 +233,8 @@ public class HealthManager {
     String trackerURL = cmd.getOptionValue("trackerURL", "http://localhost:8888");
 
     // build the final config by expanding all the variables
-    Config config = Config.expand(Config.newBuilder()
-        .putAll(ClusterConfig.loadConfig(heronHome, configPath, releaseFile, overrideConfigFile))
+    Config config = Config.toLocalMode(Config.newBuilder()
+        .putAll(ConfigLoader.loadConfig(heronHome, configPath, releaseFile, overrideConfigFile))
         .putAll(commandLineConfigs(cluster, role, environ, topologyName, verbose))
         .build());
 
