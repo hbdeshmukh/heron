@@ -59,11 +59,10 @@ java_tests(
    test_classes = [
        "com.twitter.heron.healthmgr.detector.BackPressureDetectorTest",
        "com.twitter.heron.healthmgr.resolver.ScaleUpResolverTest",
-       "com.twitter.heron.healthmgr.resolver.FailedTuplesResolverTest",
-       "com.twitter.heron.healthmgr.detector.FailedTuplesDetectorTest",
-       "com.twitter.heron.healthmgr.policy.FailedTuplesPolicyTest",
        "com.twitter.heron.healthmgr.detector.ProcessingSkewDetectorTest",
        "com.twitter.heron.healthmgr.policy.BackPressurePolicyTest",
+       "com.twitter.heron.healthmgr.policy.ThroughputSLAPolicyTest",
+
      ],
      runtime_deps = [ ":healthmgr-tests" ],
      size = "medium",

@@ -68,7 +68,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
   @Override
   public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
                                   Diagnosis<ComponentBottleneck> secondDiagnosis){
-    return true;
+    return false;
   }
 
   // TODO avoid overloading state store by accepting the packing plan from the runtime

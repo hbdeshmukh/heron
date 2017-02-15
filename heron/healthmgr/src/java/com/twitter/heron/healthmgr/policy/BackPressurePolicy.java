@@ -120,7 +120,7 @@ public class BackPressurePolicy implements HealthPolicy {
   @SuppressWarnings("unchecked")
   private <T extends Bottleneck> void evaluateAction(IDetector<T> detector, IResolver<T> resolver,
                                                      ActionEntry<? extends Bottleneck> lastAction) {
-    Boolean success = false;
+    Boolean success = true;
     Diagnosis<? extends Bottleneck> newDiagnosis;
     newDiagnosis = detectorService.run(detector, topology);
     if (newDiagnosis != null) {

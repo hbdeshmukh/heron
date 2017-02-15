@@ -72,7 +72,7 @@ public class ReportingDetector implements IDetector<ComponentBottleneck> {
   @Override
   public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
                                   Diagnosis<ComponentBottleneck> secondDiagnosis){
-    return true;
+    return false;
   }
 
   private void updateBottlenecks(Set<ComponentBottleneck> bottlenecks, String component) {
