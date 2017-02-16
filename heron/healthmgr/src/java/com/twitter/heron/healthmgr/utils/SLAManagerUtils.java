@@ -36,13 +36,15 @@ public final class SLAManagerUtils {
   }
 
   public static HashMap<String, ComponentBottleneck> retrieveMetricValues(String metricName,
+                                                                          String metricExtension,
                                                                           String component,
                                                                           SinkVisitor visitor,
                                                                           PackingPlan packingPlan) {
     HashMap<String, ComponentBottleneck> results = new HashMap<>();
     for (PackingPlan.ContainerPlan containerPlan : packingPlan.getContainers()) {
       for (PackingPlan.InstancePlan instancePlan : containerPlan.getInstances()) {
-        String metricValue = getMetricValue(metricName, component, visitor, containerPlan,
+        String metricValue = getMetricValue(metricName, metricExtension,
+            component, visitor, containerPlan,
             instancePlan);
         if (metricValue == null) {
           continue;
@@ -63,15 +65,23 @@ public final class SLAManagerUtils {
     return results;
   }
 
-  public static String getMetricValue(String metricName, String component, SinkVisitor visitor,
+  public static String getMetricValue(String metricName, String metricExtension,
+                                      String component, SinkVisitor visitor,
                                       PackingPlan.ContainerPlan containerPlan,
                                       PackingPlan.InstancePlan instancePlan) {
     String name = "container_" + containerPlan.getId()
         + "_" + instancePlan.getComponentName()
         + "_" + instancePlan.getTaskId();
     //System.out.println(BACKPRESSURE_METRIC +"/" + name);
+    String newMetricName;
+    if(metricExtension.equals("")){
+      newMetricName = metricName + "/" + name;
+    }
+    else{
+      newMetricName = metricName + "/" + name + "/" + metricExtension;
+    }
     Collection<MetricsInfo> metricsResults =
-        visitor.getNextMetric(metricName + "/" + name, component);
+        visitor.getNextMetric(newMetricName, component);
     if (metricsResults.size() > 1) {
       throw new IllegalStateException(
           String.format("More than one metric (%d) received for %s", metricsResults.size(),

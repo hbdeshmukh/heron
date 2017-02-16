@@ -50,7 +50,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
     LOG.info("Executing: " + this.getClass().getName());
     PackingPlan packingPlan = Runtime.packingPlan(runtime);
     HashMap<String, ComponentBottleneck> results = SLAManagerUtils.retrieveMetricValues(
-        BACKPRESSURE_METRIC, "__stmgr__", this.visitor, packingPlan);
+        BACKPRESSURE_METRIC, "", "__stmgr__", this.visitor, packingPlan);
 
     Set<ComponentBottleneck> bottlenecks = new HashSet<ComponentBottleneck>();
     for (ComponentBottleneck bottleneck : results.values()) {

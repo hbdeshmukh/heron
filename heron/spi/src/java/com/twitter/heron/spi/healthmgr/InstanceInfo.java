@@ -62,6 +62,17 @@ public class InstanceInfo {
     return false;
   }
 
+  public boolean containsBelow(String metric, String value) {
+    for(MetricsInfo current : metrics){
+      if(current.getName().equals(metric)){
+        if(Double.parseDouble(current.getValue()) <= Double.parseDouble(value)){
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   public String getMetricValue(String metric) throws RuntimeException {
     for (MetricsInfo currentMetric : metrics) {
       if (currentMetric.getName().equals(metric)) {

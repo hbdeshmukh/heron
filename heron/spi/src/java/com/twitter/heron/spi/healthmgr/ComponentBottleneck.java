@@ -69,6 +69,19 @@ public class ComponentBottleneck extends Bottleneck {
     return false;
   }
 
+  public boolean containsBelow(String metric, String value){
+    int count = 0;
+    for (InstanceBottleneck instanceBottleneck : instances) {
+      if (instanceBottleneck.containsBelow(metric, value)) {
+        count++;
+      }
+    }
+    if (count == instances.size()) {
+      return true;
+    }
+    return false;
+  }
+
   public boolean containsNonZero(String metric) {
     int count = 0;
     for (InstanceBottleneck instanceBottleneck : instances) {

@@ -69,7 +69,8 @@ java_test(
     deps = util_deps_files +
       [
       "//heron/spi/src/java:metricsmgr-spi-java",
-      "//heron/spi/src/java:healthmgr-spi-java"
+      "//heron/spi/src/java:healthmgr-spi-java",
+      "//heron/spi/src/java:packing-spi-java"
       ],
     size = "small",
 )

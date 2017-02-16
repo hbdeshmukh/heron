@@ -40,9 +40,9 @@ public final class ExclamationTopology {
 
   public static void main(String[] args) throws Exception {
     TopologyBuilder builder = new TopologyBuilder();
-    int parallelism = 2;
+    int parallelism = 1;
 
-    builder.setSpout("word", new TestWordSpout(), parallelism);
+    builder.setSpout("word", new TestWordSpout(), 2 * parallelism);
     builder.setBolt("exclaim1", new ExclamationBolt(), 2 * parallelism)
         .shuffleGrouping("word");
 
@@ -56,7 +56,7 @@ public final class ExclamationTopology {
     conf.setContainerCpuRequested(5);
 
     if (args != null && args.length > 0) {
-      conf.setNumStmgrs(parallelism);
+      conf.setNumStmgrs(2* parallelism);
       StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
     } else {
       System.out.println("Topology name not provided as an argument, running in simulator mode.");

@@ -24,7 +24,7 @@ java_toolchain(
 action_listener(
     name = "compile_java",
     mnemonics = ["Javac"],
-    extra_actions = [":checkstyle_java"],
+    extra_actions = [],
 )
 
 extra_action(

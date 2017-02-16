@@ -101,19 +101,21 @@ public class BackPressurePolicy implements HealthPolicy {
     ActionEntry<? extends Bottleneck> lastAction = resolverService.getLog()
         .getLastAction(topology.getName());
     System.out.println("last action " + lastAction);
-    switch (lastAction.getAction()) {
-      case "DATA_SKEW_RESOLVER": {
-        evaluateAction(dataSkewDetector, null, lastAction);
-        break;
+    if(lastAction != null) {
+      switch (lastAction.getAction()) {
+        case "DATA_SKEW_RESOLVER": {
+          evaluateAction(dataSkewDetector, null, lastAction);
+          break;
+        }
+        case "SLOW_INSTANCE_RESOLVER":
+          evaluateAction(slowInstanceDetector, null, lastAction);
+          break;
+        case "SCALE_UP_RESOLVER":
+          evaluateAction(limitedParallelismDetector, scaleUpResolver, lastAction);
+          break;
+        default:
+          break;
       }
-      case "SLOW_INSTANCE_RESOLVER":
-        evaluateAction(slowInstanceDetector, null, lastAction);
-        break;
-      case "SCALE_UP_RESOLVER":
-        evaluateAction(limitedParallelismDetector, scaleUpResolver, lastAction);
-        break;
-      default:
-        break;
     }
   }
 

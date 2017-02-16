@@ -41,6 +41,13 @@ public class InstanceBottleneck extends Bottleneck {
     return false;
   }
 
+  public boolean containsBelow (String metric, String value){
+    if (instanceData.containsBelow(metric, value)) {
+      return true;
+    }
+    return false;
+  }
+
   public String getDataPoint(String metric) {
     return instanceData.getMetricValue(metric);
   }

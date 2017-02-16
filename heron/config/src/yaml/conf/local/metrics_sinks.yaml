@@ -55,6 +55,7 @@ tmaster-sink:
     "__jvm-gc-collection-time-ms": LAST
     "__server/__time_spent_back_pressure_initiated": SUM
     "__time_spent_back_pressure_by_compid": SUM
+    "__connection_buffer_by_intanceid": AVG
 
 ### Config for scribe-sink
 # scribe-sink:
