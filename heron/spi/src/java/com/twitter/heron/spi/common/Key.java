@@ -122,6 +122,7 @@ public enum Key {
   SCHEDULER_STATE_MANAGER_ADAPTOR("heron.runtime.scheduler.state.manager.adaptor", Type.STRING),
   SCHEDULER_SHUTDOWN             ("heron.runtime.scheduler.shutdown",              Type.STRING),
   PACKING_CLASS_INSTANCE         ("heron.runtime.packing.class.instance",          Type.STRING),
+  PACKING_PLAN                   ("heron.runtime.packing.plan",                    Type.STRING),
   LAUNCHER_CLASS_INSTANCE        ("heron.runtime.launcher.class.instance",         Type.STRING),
   COMPONENT_RAMMAP               ("heron.runtime.component.rammap",                Type.STRING),
   COMPONENT_JVM_OPTS_IN_BASE64   ("heron.runtime.component.jvm.opts.in.base64",    Type.STRING),

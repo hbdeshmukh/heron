@@ -76,14 +76,11 @@ public class ReportingDetector implements IDetector<ComponentBottleneck> {
   }
 
   private void updateBottlenecks(Set<ComponentBottleneck> bottlenecks, String component) {
-    Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(metric,
-        component);
+    Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(metric, component);
 
-    ComponentBottleneck currentBottleneck;
-    currentBottleneck = new ComponentBottleneck(component);
+    ComponentBottleneck currentBottleneck = new ComponentBottleneck(component);
     for (MetricsInfo metricsInfo : metricsResults) {
-      SLAManagerUtils.updateComponentBottleneck(currentBottleneck, metric,
-          metricsInfo);
+      SLAManagerUtils.updateComponentBottleneck(currentBottleneck, metric, metricsInfo);
     }
     bottlenecks.add(currentBottleneck);
   }
@@ -91,7 +88,6 @@ public class ReportingDetector implements IDetector<ComponentBottleneck> {
   @Override
   public void close() {
   }
-
 }
 
 

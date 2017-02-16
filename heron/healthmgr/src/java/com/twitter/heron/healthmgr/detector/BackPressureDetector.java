@@ -16,12 +16,10 @@ package com.twitter.heron.healthmgr.detector;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
-import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
@@ -29,8 +27,6 @@ import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IDetector;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
-import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
-import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
 public class BackPressureDetector implements IDetector<ComponentBottleneck> {
 
@@ -38,6 +34,8 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
   private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private SinkVisitor visitor;
   private Config runtime;
+
+
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
@@ -50,7 +48,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
       throws RuntimeException {
 
     LOG.info("Executing: " + this.getClass().getName());
-    PackingPlan packingPlan = getPackingPlan(topology);
+    PackingPlan packingPlan = Runtime.packingPlan(runtime);
     HashMap<String, ComponentBottleneck> results = SLAManagerUtils.retrieveMetricValues(
         BACKPRESSURE_METRIC, "__stmgr__", this.visitor, packingPlan);
 
@@ -61,6 +59,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
         bottlenecks.add(bottleneck);
       }
     }
+
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
 
@@ -69,20 +68,6 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
   public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
                                   Diagnosis<ComponentBottleneck> secondDiagnosis){
     return false;
-  }
-
-  // TODO avoid overloading state store by accepting the packing plan from the runtime
-  private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {
-    SchedulerStateManagerAdaptor adaptor = Runtime.schedulerStateManagerAdaptor(runtime);
-
-    // get a packed plan and schedule it
-    PackingPlans.PackingPlan serializedPackingPlan = adaptor.getPackingPlan(topology.getName());
-    if (serializedPackingPlan == null) {
-      throw new RuntimeException(String.format("Failed to fetch PackingPlan for topology: %s "
-          + "from the state manager", topology.getName()));
-    }
-    PackingPlan packedPlan = new PackingPlanProtoDeserializer().fromProto(serializedPackingPlan);
-    return packedPlan;
   }
 
   @Override

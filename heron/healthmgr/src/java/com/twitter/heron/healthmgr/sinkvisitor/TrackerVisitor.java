@@ -28,7 +28,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.twitter.heron.api.generated.TopologyAPI;
-import com.twitter.heron.scheduler.LaunchRunner;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Context;
@@ -38,7 +37,7 @@ import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 public class TrackerVisitor implements SinkVisitor {
   private static final Logger LOG = Logger.getLogger(TrackerVisitor.class.getName());
 
-  private WebTarget target;
+  private WebTarget baseTarget;
 
   @Override
   public void initialize(Config conf, Config runtime) {
@@ -47,7 +46,7 @@ public class TrackerVisitor implements SinkVisitor {
     LOG.info("Metrics will be read from:" + trackerURL);
 
     Client client = ClientBuilder.newClient();
-    this.target = client.target(trackerURL)
+    this.baseTarget = client.target(trackerURL)
         .path("topologies/metrics")
         .queryParam("cluster", Context.cluster(conf))
         .queryParam("environ", "default")
@@ -59,7 +58,7 @@ public class TrackerVisitor implements SinkVisitor {
   public Collection<MetricsInfo> getNextMetric(String metric, String... component) {
     List<MetricsInfo> metricsInfo = new ArrayList<MetricsInfo>();
     for (int j = 0; j < component.length; j++) {
-      target = target.queryParam("metricname", metric)
+      WebTarget target = baseTarget.queryParam("metricname", metric)
           .queryParam("component", component[j]);
       Response r = target.request(MediaType.APPLICATION_JSON_TYPE).get();
       TrackerOutput result = r.readEntity(TrackerOutput.class);

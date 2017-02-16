@@ -18,9 +18,11 @@ import java.net.URI;
 import java.util.Properties;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
+import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.scheduler.ILauncher;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
@@ -46,6 +48,10 @@ public final class Runtime {
 
   public static URI topologyPackageUri(Config cfg) {
     return (URI) cfg.get(Key.TOPOLOGY_PACKAGE_URI);
+  }
+
+  public static PackingPlan packingPlan(Config runtime) {
+    return (PackingPlan) runtime.get(Key.PACKING_PLAN);
   }
 
   public static SchedulerStateManagerAdaptor schedulerStateManagerAdaptor(Config runtime) {

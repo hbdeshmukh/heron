@@ -14,17 +14,8 @@
 
 package com.twitter.heron.healthmgr.utils;
 
-import com.google.common.util.concurrent.SettableFuture;
-
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.api.topology.TopologyBuilder;
-import com.twitter.heron.packing.roundrobin.RoundRobinPacking;
-import com.twitter.heron.proto.system.PackingPlans;
-import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.common.Key;
-import com.twitter.heron.spi.packing.IPacking;
-import com.twitter.heron.spi.packing.PackingPlan;
-import com.twitter.heron.spi.packing.PackingPlanProtoSerializer;
 
 public final class TestUtils {
 
@@ -54,32 +45,4 @@ public final class TestUtils {
             getTopology();
     return topology;
   }
-
-  public static PackingPlan getPackingPlan(TopologyAPI.Topology topology, IPacking packing) {
-
-    Config config = Config.newBuilder()
-        .put(Key.TOPOLOGY_ID, topology.getId())
-        .put(Key.TOPOLOGY_NAME, topology.getName())
-        .build();
-
-    packing.initialize(config, topology);
-    return packing.pack();
-  }
-
-  public static PackingPlans.PackingPlan testProtoPackingPlan(
-      TopologyAPI.Topology topology, IPacking packing) {
-    PackingPlan plan = getPackingPlan(topology, packing);
-    PackingPlanProtoSerializer serializer = new PackingPlanProtoSerializer();
-    return serializer.toProto(plan);
-  }
-
-  public static SettableFuture<PackingPlans.PackingPlan> getTestPacking(
-      TopologyAPI.Topology topology) {
-    PackingPlans.PackingPlan packingPlan =
-        testProtoPackingPlan(topology, new RoundRobinPacking());
-    final SettableFuture<PackingPlans.PackingPlan> future = SettableFuture.create();
-    future.set(packingPlan);
-    return future;
-  }
-
 }

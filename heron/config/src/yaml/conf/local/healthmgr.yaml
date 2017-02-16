@@ -1,8 +1,8 @@
 # list of policies to be executed for self healing
 heron.class.health.policies:
-  - failed-tuple-policy
+  - bp-tuple-policy
 
 # configuration specific to individual policies listed above
-failed-tuple-policy:
-  health.policy.class: "com.twitter.heron.healthmgr.policy.FailedTuplesPolicy"
+bp-tuple-policy:
+  health.policy.class: "com.twitter.heron.healthmgr.policy.BackPressurePolicy"
   health.policy.interval.ms: "10000"
