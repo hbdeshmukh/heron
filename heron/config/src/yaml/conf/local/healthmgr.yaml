@@ -6,3 +6,7 @@ heron.class.health.policies:
 bp-tuple-policy:
   health.policy.class: "com.twitter.heron.healthmgr.policy.BackPressurePolicy"
   health.policy.interval.ms: "10000"
+
+throughput-sla-policy:
+  health.policy.class: "com.twitter.heron.healthmgr.policy.ThroughputSLAPolicy"
+  health.policy.throughput.sla.per.sec: "150000"

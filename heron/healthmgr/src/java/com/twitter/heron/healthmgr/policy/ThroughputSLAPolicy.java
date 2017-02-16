@@ -15,6 +15,7 @@
 package com.twitter.heron.healthmgr.policy;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.detector.BackPressureDetector;
@@ -30,6 +31,7 @@ import com.twitter.heron.spi.healthmgr.HealthPolicy;
 
 
 public class ThroughputSLAPolicy implements HealthPolicy {
+  private static final Logger LOG = Logger.getLogger(ThroughputSLAPolicy.class.getName());
 
   private static final String EMIT_COUNT_METRIC = "__emit-count/default";
   private BackPressureDetector backPressureDetector = new BackPressureDetector();
@@ -52,10 +54,12 @@ public class ThroughputSLAPolicy implements HealthPolicy {
     emitCountDetector.initialize(conf, runtime);
 
     spoutScaleUpResolver.initialize(conf, runtime);
-    detectorService = (DetectorService) Runtime
-        .getDetectorService(runtime);
-    resolverService = (ResolverService) Runtime
-        .getResolverService(runtime);
+    detectorService = (DetectorService) Runtime.getDetectorService(runtime);
+    resolverService = (ResolverService) Runtime.getResolverService(runtime);
+
+
+    this.maxThroughput = conf.getLongValue("health.policy.throughput.sla.per.sec", 10000);
+    LOG.info("ThroughputSLA: " + maxThroughput);
   }
 
   public void setSpoutThroughput(double throughput) {

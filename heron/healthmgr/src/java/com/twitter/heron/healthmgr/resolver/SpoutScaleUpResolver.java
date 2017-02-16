@@ -16,6 +16,7 @@ package com.twitter.heron.healthmgr.resolver;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -90,6 +91,12 @@ public class SpoutScaleUpResolver implements IResolver<ComponentBottleneck> {
       LOG.log(Level.SEVERE, "Failed to update topology with Scheduler, updateTopologyRequest="
           + updateTopologyRequest);
       return false;
+    }
+
+    try {
+      TimeUnit.MINUTES.sleep(5);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
     }
 
     // Clean the connection when we are done.
