@@ -35,8 +35,6 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
   private SinkVisitor visitor;
   private Config runtime;
 
-
-
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
     this.runtime = inputRuntime;

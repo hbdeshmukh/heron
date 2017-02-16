@@ -79,7 +79,7 @@ public class InstanceInfo {
         return currentMetric.getValue();
       }
     }
-    throw new RuntimeException("No metric with name " + metric + "was found");
+    throw new RuntimeException("No metric with name " + metric + " not found");
   }
 
 }

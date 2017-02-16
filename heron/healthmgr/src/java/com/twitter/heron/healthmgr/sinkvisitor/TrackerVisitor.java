@@ -36,6 +36,7 @@ import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 
 public class TrackerVisitor implements SinkVisitor {
   private static final Logger LOG = Logger.getLogger(TrackerVisitor.class.getName());
+  public static final int INTERVAL = 600;
 
   private WebTarget baseTarget;
 
@@ -51,7 +52,7 @@ public class TrackerVisitor implements SinkVisitor {
         .queryParam("cluster", Context.cluster(conf))
         .queryParam("environ", "default")
         .queryParam("topology", topology.getName())
-        .queryParam("interval", "60");
+        .queryParam("interval", INTERVAL);
   }
 
   @Override
@@ -83,7 +84,8 @@ public class TrackerVisitor implements SinkVisitor {
     Map<String, String> instanceData = output.getResult().getMetrics().get(metricName);
     if (instanceData != null) {
       for (String instanceName : instanceData.keySet()) {
-        metricsInfo.add(new MetricsInfo(instanceName, instanceData.get(instanceName)));
+        Double value = Double.parseDouble(instanceData.get(instanceName)) / INTERVAL;
+        metricsInfo.add(new MetricsInfo(instanceName, String.valueOf(value.longValue())));
       }
     }
     return metricsInfo;

@@ -120,13 +120,17 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       totalBackpressureTime += backpressureTime;
     }
 
-    if (totalBackpressureTime > 60000) {
-      totalBackpressureTime = 59999;
-      LOG.log(Level.WARNING, "Invalid total back-pressure time (> 60s): " + totalBackpressureTime);
+    if (totalBackpressureTime > 1000) {
+      totalBackpressureTime = 999;
+      LOG.log(Level.WARNING, "Invalid total back-pressure-time/sec: " + totalBackpressureTime);
+    } else if (totalBackpressureTime < 20) {
+      totalBackpressureTime = 0;
+      LOG.log(Level.WARNING, "Ignore noisy back-pressure-time/sec: " + totalBackpressureTime);
     }
+
     LOG.info("Total back-pressure: " + totalBackpressureTime);
 
-    double unusedCapacity = (1.0 * totalBackpressureTime) / (60000 - totalBackpressureTime);
+    double unusedCapacity = (1.0 * totalBackpressureTime) / (1000 - totalBackpressureTime);
     // scale up fencing: do not scale more than 4 times the current size
     unusedCapacity = unusedCapacity > 4.0 ? 4.0 : unusedCapacity;
     LOG.info("Unused capacity: " + unusedCapacity);

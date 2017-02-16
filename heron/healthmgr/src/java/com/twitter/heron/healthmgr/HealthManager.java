@@ -38,6 +38,7 @@ import com.twitter.heron.common.utils.logging.LoggingHelper;
 import com.twitter.heron.healthmgr.services.DetectorService;
 import com.twitter.heron.healthmgr.services.ResolverService;
 import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
+import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
 import com.twitter.heron.scheduler.client.SchedulerClientFactory;
 import com.twitter.heron.spi.common.Config;
@@ -46,6 +47,8 @@ import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.healthmgr.HealthPolicy;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
+import com.twitter.heron.spi.packing.PackingPlan;
+import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
 import com.twitter.heron.spi.statemgr.IStateManager;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 import com.twitter.heron.spi.utils.ReflectionUtils;
@@ -262,11 +265,15 @@ public class HealthManager {
     SchedulerStateManagerAdaptor adaptor = createStateMgrAdaptor();
     TopologyAPI.Topology topology = getTopology(adaptor);
     SinkVisitor sinkVisitor = new TrackerVisitor();
+    PackingPlans.PackingPlan protoPackingPlan = adaptor.getPackingPlan(topology.getName());
+    PackingPlanProtoDeserializer deserializer = new PackingPlanProtoDeserializer();
+    PackingPlan packingPlan = deserializer.fromProto(protoPackingPlan);
 
     runtime = Config.newBuilder()
         .putAll(runtime)
         .put(Key.TOPOLOGY_DEFINITION, topology)
         .put(Key.SCHEDULER_STATE_MANAGER_ADAPTOR, adaptor)
+        .put(Key.PACKING_PLAN, packingPlan)
         .put(Key.METRICS_READER_INSTANCE, sinkVisitor)
         .put(Key.HEALTH_MGR_DETECTOR_SERVICE, detectorService)
         .put(Key.HEALTH_MGR_RESOLVER_SERVICE, resolverService)
