@@ -6,6 +6,7 @@ java_binary(
     deps = [
         "//heron/common/src/java:basics-java",
         "//heron/storm/src/java:storm-compatibility-java",
+        "@org_yaml_snakeyaml//jar",
     ],
     create_executable = 0,
 )

@@ -44,7 +44,7 @@ public class TestWordSpout extends BaseRichSpout {
   }
 
   public void nextTuple() {
-    final String word = words[rand.nextInt(words.length)];
+    final String word = (int) (Math.random() * 1000) + words[rand.nextInt(words.length)];
     collector.emit(new Values(word));
   }
 
