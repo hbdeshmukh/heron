@@ -76,6 +76,9 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
     PackingPlans.PackingPlan proposedPlan = buildNewPackingPlan(currentPlan, changeRequests,
         topology);
+    if (proposedPlan == null) {
+      return false;
+    }
 
     Scheduler.UpdateTopologyRequest updateTopologyRequest =
         Scheduler.UpdateTopologyRequest.newBuilder()
@@ -183,6 +186,12 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     PackingPlan currentPackingPlan = deserializer.fromProto(currentProtoPlan);
 
     Map<String, Integer> componentCounts = currentPackingPlan.getComponentCounts();
+    int currentCount = componentCounts.get(changeRequests.keySet().iterator().next());
+    if (currentCount == newParallelism) {
+      LOG.info("New parallelism is same as current: " + changeRequests);
+      return null;
+    }
+
     Map<String, Integer> componentChanges = parallelismDelta(componentCounts, changeRequests);
 
     // Create an instance of the packing class

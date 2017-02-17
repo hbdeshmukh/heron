@@ -15,6 +15,7 @@
 package com.twitter.heron.healthmgr.policy;
 
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
@@ -28,6 +29,8 @@ import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.HealthPolicy;
+import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
+import com.twitter.heron.spi.healthmgr.InstanceInfo;
 
 
 public class ThroughputSLAPolicy implements HealthPolicy {
@@ -57,9 +60,8 @@ public class ThroughputSLAPolicy implements HealthPolicy {
     detectorService = (DetectorService) Runtime.getDetectorService(runtime);
     resolverService = (ResolverService) Runtime.getResolverService(runtime);
 
-
-    this.maxThroughput = conf.getLongValue("health.policy.throughput.sla.per.sec", 10000);
-    LOG.info("ThroughputSLA: " + maxThroughput);
+    this.maxThroughput = Long.valueOf(conf.getStringValue("health.policy.throughput.sla.per.sec"));
+    LOG.info("ThroughputSLA (per sec): " + maxThroughput);
   }
 
   public void setSpoutThroughput(double throughput) {
@@ -68,11 +70,22 @@ public class ThroughputSLAPolicy implements HealthPolicy {
 
   @Override
   public void execute() {
-
+    final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
     performedAction = false;
     Diagnosis<ComponentBottleneck> backPressureDiagnosis =
         detectorService.run(backPressureDetector, topology);
-    System.out.println("Found backpressure");
+
+    for (ComponentBottleneck componentBottleneck : backPressureDiagnosis.getSummary()) {
+      for (InstanceBottleneck instanceBottleneck : componentBottleneck.getInstances()) {
+        int backPressure = Integer.valueOf(instanceBottleneck.getDataPoint(BACKPRESSURE_METRIC));
+        if (backPressure > 20) {
+          LOG.log(Level.INFO, "Instance: {0}, back-pressure: {1}",
+              new Object[]{instanceBottleneck.getInstanceData().getInstanceNameId(), backPressure});
+          LOG.info("Cancel spout scale up");
+          return;
+        }
+      }
+    }
 
     if (backPressureDiagnosis.getSummary().size() == 0) {
       System.out.println("No backpressure");

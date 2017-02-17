@@ -32,9 +32,8 @@ import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
  * Detects the instances that have data skew.
  */
 public class ReportingDetector implements IDetector<ComponentBottleneck> {
-
-  private SinkVisitor visitor;
   private String metric;
+  Config runtime;
 
   public ReportingDetector(String metric) {
     this.metric = metric;
@@ -42,7 +41,7 @@ public class ReportingDetector implements IDetector<ComponentBottleneck> {
 
   @Override
   public void initialize(Config config, Config runtime) {
-    this.visitor = Runtime.metricsReader(runtime);
+    this.runtime = runtime;
   }
 
   @Override
@@ -76,7 +75,8 @@ public class ReportingDetector implements IDetector<ComponentBottleneck> {
   }
 
   private void updateBottlenecks(Set<ComponentBottleneck> bottlenecks, String component) {
-    Iterable<MetricsInfo> metricsResults = this.visitor.getNextMetric(metric, component);
+    SinkVisitor visitor = Runtime.metricsReader(runtime);
+    Iterable<MetricsInfo> metricsResults = visitor.getNextMetric(metric, component);
 
     ComponentBottleneck currentBottleneck = new ComponentBottleneck(component);
     for (MetricsInfo metricsInfo : metricsResults) {

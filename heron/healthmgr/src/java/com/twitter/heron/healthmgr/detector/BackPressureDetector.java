@@ -20,6 +20,7 @@ import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
+import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
@@ -27,28 +28,29 @@ import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IDetector;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
+import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
+import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
 public class BackPressureDetector implements IDetector<ComponentBottleneck> {
 
   private static final Logger LOG = Logger.getLogger(BackPressureDetector.class.getName());
   private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
-  private SinkVisitor visitor;
   private Config runtime;
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
     this.runtime = inputRuntime;
-    this.visitor = Runtime.metricsReader(runtime);
   }
 
   @Override
   public Diagnosis<ComponentBottleneck> detect(TopologyAPI.Topology topology)
       throws RuntimeException {
-
     LOG.info("Executing: " + this.getClass().getName());
-    PackingPlan packingPlan = Runtime.packingPlan(runtime);
+    SinkVisitor visitor = Runtime.metricsReader(runtime);
+    PackingPlan packingPlan = getPackingPlan(topology);
+
     HashMap<String, ComponentBottleneck> results = SLAManagerUtils.retrieveMetricValues(
-        BACKPRESSURE_METRIC, "", "__stmgr__", this.visitor, packingPlan);
+        BACKPRESSURE_METRIC, "", "__stmgr__", visitor, packingPlan);
 
     Set<ComponentBottleneck> bottlenecks = new HashSet<ComponentBottleneck>();
     for (ComponentBottleneck bottleneck : results.values()) {
@@ -61,10 +63,17 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
 
+  private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {
+    // TODO this could be optimized
+    SchedulerStateManagerAdaptor adaptor = Runtime.schedulerStateManagerAdaptor(runtime);
+    PackingPlans.PackingPlan protoPackingPlan = adaptor.getPackingPlan(topology.getName());
+    PackingPlanProtoDeserializer deserializer = new PackingPlanProtoDeserializer();
+    return deserializer.fromProto(protoPackingPlan);
+  }
 
   @Override
   public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
-                                  Diagnosis<ComponentBottleneck> secondDiagnosis){
+                                  Diagnosis<ComponentBottleneck> secondDiagnosis) {
     return false;
   }
 
