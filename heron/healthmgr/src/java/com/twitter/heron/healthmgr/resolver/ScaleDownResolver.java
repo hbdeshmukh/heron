@@ -16,6 +16,7 @@ package com.twitter.heron.healthmgr.resolver;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -39,9 +40,6 @@ import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 import com.twitter.heron.spi.utils.ReflectionUtils;
 
 public class ScaleDownResolver implements IResolver<ComponentBottleneck> {
-
-  private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
-  private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
   private static final Logger LOG = Logger.getLogger(ScaleDownResolver.class.getName());
   private BackPressureDetector backpressureDetector = new BackPressureDetector();
   private Config config;
@@ -85,6 +83,12 @@ public class ScaleDownResolver implements IResolver<ComponentBottleneck> {
       LOG.log(Level.SEVERE, "Failed to update topology with Scheduler, updateTopologyRequest="
           + updateTopologyRequest);
       return false;
+    }
+
+    try {
+      TimeUnit.MINUTES.sleep(5);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
     }
 
     // Clean the connection when we are done.

@@ -28,7 +28,6 @@ import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IDetector;
-import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
@@ -49,12 +48,11 @@ public class LowPendingPacketsDetector implements IDetector<ComponentBottleneck>
     this.runtime = inputRuntime;
     this.visitor = Runtime.metricsReader(runtime);
     this.backpressureDetector.initialize(inputConfig, runtime);
-    detectorService = (DetectorService) Runtime
-        .getDetectorService(runtime);
-  }
+    detectorService = (DetectorService) Runtime.getDetectorService(runtime);
+    this.packetThreshold =
+        Integer.valueOf(inputConfig.getStringValue("health.policy.scaledown.low.packet.limit"));
 
-  public void setPacketThreshold(int noPackets){
-    this.packetThreshold = noPackets;
+    LOG.info("Scale down detector's low packet limit is " + packetThreshold);
   }
 
   @Override
@@ -65,7 +63,7 @@ public class LowPendingPacketsDetector implements IDetector<ComponentBottleneck>
         detectorService.run(backpressureDetector, topology);
     if(backPressuredDiagnosis.getSummary().size() == 0) {
       LOG.info("Executing: " + this.getClass().getName());
-      PackingPlan packingPlan = Runtime.packingPlan(runtime);
+      PackingPlan packingPlan = getPackingPlan(topology);
       HashMap<String, ComponentBottleneck> results = SLAManagerUtils.retrieveMetricValues(
           AVG_PENDING_PACKETS, "packets", "__stmgr__", this.visitor, packingPlan);
 
@@ -86,6 +84,13 @@ public class LowPendingPacketsDetector implements IDetector<ComponentBottleneck>
     return null;
   }
 
+  private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {
+    // TODO this could be optimized
+    SchedulerStateManagerAdaptor adaptor = Runtime.schedulerStateManagerAdaptor(runtime);
+    PackingPlans.PackingPlan protoPackingPlan = adaptor.getPackingPlan(topology.getName());
+    PackingPlanProtoDeserializer deserializer = new PackingPlanProtoDeserializer();
+    return deserializer.fromProto(protoPackingPlan);
+  }
 
   private int contains(List<TopologyAPI.Spout> spouts, String name) {
     for (int i = 0; i < spouts.size(); i++) {

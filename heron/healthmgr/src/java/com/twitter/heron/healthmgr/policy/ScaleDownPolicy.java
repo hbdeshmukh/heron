@@ -41,22 +41,14 @@ public class ScaleDownPolicy implements HealthPolicy {
   private DetectorService detectorService;
   private ResolverService resolverService;
 
-
-  public void setPacketsThreshold(int noPackets) {
-    lowPendingPacketsDetector.setPacketThreshold(noPackets);
-  }
-
-
   @Override
   public void initialize(Config conf, Config runtime) {
     this.topology = Runtime.topology(runtime);
 
     lowPendingPacketsDetector.initialize(conf, runtime);
     scaleDownResolver.initialize(conf, runtime);
-    detectorService = (DetectorService) Runtime
-        .getDetectorService(runtime);
-    resolverService = (ResolverService) Runtime
-        .getResolverService(runtime);
+    detectorService = (DetectorService) Runtime.getDetectorService(runtime);
+    resolverService = (ResolverService) Runtime.getResolverService(runtime);
   }
 
   @Override

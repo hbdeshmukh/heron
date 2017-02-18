@@ -51,6 +51,7 @@ public class LowPendingPacketsDetectorTest {
         .put(Key.INSTANCE_DISK, ByteAmount.fromGigabytes(1).asBytes())
         .put(Key.TRACKER_URL, "http://localhost:8888")
         .put(Key.CLUSTER, "local")
+        .put("health.policy.scaledown.low.packet.limit", 500)
         .build();
 
     RoundRobinPacking packing = new RoundRobinPacking();
@@ -77,7 +78,6 @@ public class LowPendingPacketsDetectorTest {
 
     LowPendingPacketsDetector detector = new LowPendingPacketsDetector();
     detector.initialize(config, runtime);
-    detector.setPacketThreshold(500);
     Diagnosis<ComponentBottleneck> result = detector.detect(topology);
     Assert.assertEquals(1, result.getSummary().size());
   }
