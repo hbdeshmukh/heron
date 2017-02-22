@@ -15,14 +15,12 @@ package com.twitter.heron.healthmgr.resolver;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.basics.SysUtils;
-import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.scheduler.Scheduler;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
@@ -64,7 +62,6 @@ public class SpoutScaleUpResolver implements IResolver<ComponentBottleneck> {
 
   @Override
   public Boolean resolve(Diagnosis<ComponentBottleneck> diagnosis, TopologyAPI.Topology topology) {
-
     ComponentBottleneck bottleneck = diagnosis.getSummary().iterator().next();
     String componentName = bottleneck.getComponentName();
 
@@ -79,6 +76,10 @@ public class SpoutScaleUpResolver implements IResolver<ComponentBottleneck> {
 
     PackingPlans.PackingPlan proposedPlan = buildNewPackingPlan(currentPlan, changeRequests,
         topology);
+
+    if (proposedPlan == null) {
+      return false;
+    }
 
     Scheduler.UpdateTopologyRequest updateTopologyRequest =
         Scheduler.UpdateTopologyRequest.newBuilder()
@@ -113,7 +114,7 @@ public class SpoutScaleUpResolver implements IResolver<ComponentBottleneck> {
 
      ComponentBottleneck current = diagnosis.getSummary().iterator().next();
      double scaleFactor = computeScaleUpFactor(current);
-     System.out.println(current.getComponentName() + " " + current.getInstances().size());
+     LOG.info(current.getComponentName() + " " + current.getInstances().size());
      this.newParallelism = (int) Math.ceil(current.getInstances().size() * scaleFactor);
 
      if (this.newParallelism == 0) {
@@ -177,8 +178,13 @@ public class SpoutScaleUpResolver implements IResolver<ComponentBottleneck> {
     PackingPlan currentPackingPlan = deserializer.fromProto(currentProtoPlan);
 
     Map<String, Integer> componentCounts = currentPackingPlan.getComponentCounts();
-    Map<String, Integer> componentChanges = parallelismDelta(componentCounts, changeRequests);
+    int currentCount = componentCounts.get(changeRequests.keySet().iterator().next());
+    if (currentCount == newParallelism) {
+      LOG.info("New parallelism is same as current: " + changeRequests);
+      return null;
+    }
 
+    Map<String, Integer> componentChanges = parallelismDelta(componentCounts, changeRequests);
     // Create an instance of the packing class
     String repackingClass = Context.repackingClass(config);
     IRepacking packing;
