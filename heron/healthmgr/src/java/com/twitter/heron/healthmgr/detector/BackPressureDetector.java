@@ -47,7 +47,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
       throws RuntimeException {
     LOG.info("Executing: " + this.getClass().getName());
     SinkVisitor visitor = Runtime.metricsReader(runtime);
-    PackingPlan packingPlan = getPackingPlan(topology);
+    PackingPlan packingPlan = getPackingPlan(topology, runtime);
 
     HashMap<String, ComponentBottleneck> results = SLAManagerUtils.retrieveMetricValues(
         BACKPRESSURE_METRIC, "", "__stmgr__", visitor, packingPlan);
@@ -63,7 +63,7 @@ public class BackPressureDetector implements IDetector<ComponentBottleneck> {
     return new Diagnosis<ComponentBottleneck>(bottlenecks);
   }
 
-  private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {
+  public static PackingPlan getPackingPlan(TopologyAPI.Topology topology, Config runtime) {
     // TODO this could be optimized
     SchedulerStateManagerAdaptor adaptor = Runtime.schedulerStateManagerAdaptor(runtime);
     PackingPlans.PackingPlan protoPackingPlan = adaptor.getPackingPlan(topology.getName());

@@ -28,6 +28,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.twitter.heron.api.generated.TopologyAPI;
+import com.twitter.heron.healthmgr.detector.DataSkewDetector;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Context;
@@ -36,7 +37,7 @@ import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 
 public class TrackerVisitor implements SinkVisitor {
   private static final Logger LOG = Logger.getLogger(TrackerVisitor.class.getName());
-  public static final int INTERVAL = 600;
+  public static final int INTERVAL = 300;
 
   private WebTarget baseTarget;
 
@@ -85,6 +86,10 @@ public class TrackerVisitor implements SinkVisitor {
     if (instanceData != null) {
       for (String instanceName : instanceData.keySet()) {
         Double value = Double.parseDouble(instanceData.get(instanceName)) / INTERVAL;
+        if (metricName.contains(DataSkewDetector.AVG_PENDING_PACKETS)) {
+          value *= INTERVAL / 60;
+          // avg pending count returns per second average over a minute long window
+        }
         metricsInfo.add(new MetricsInfo(instanceName, String.valueOf(value.longValue())));
       }
     }

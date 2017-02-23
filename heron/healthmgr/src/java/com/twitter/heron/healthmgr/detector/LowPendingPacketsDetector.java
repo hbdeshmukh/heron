@@ -63,7 +63,7 @@ public class LowPendingPacketsDetector implements IDetector<ComponentBottleneck>
         detectorService.run(backpressureDetector, topology);
     if(backPressuredDiagnosis.getSummary().size() == 0) {
       LOG.info("Executing: " + this.getClass().getName());
-      PackingPlan packingPlan = getPackingPlan(topology);
+      PackingPlan packingPlan = BackPressureDetector.getPackingPlan(topology, runtime);
       HashMap<String, ComponentBottleneck> results = SLAManagerUtils.retrieveMetricValues(
           AVG_PENDING_PACKETS, "packets", "__stmgr__", this.visitor, packingPlan);
 
@@ -82,14 +82,6 @@ public class LowPendingPacketsDetector implements IDetector<ComponentBottleneck>
       return new Diagnosis<ComponentBottleneck>(bottlenecks);
     }
     return null;
-  }
-
-  private PackingPlan getPackingPlan(TopologyAPI.Topology topology) {
-    // TODO this could be optimized
-    SchedulerStateManagerAdaptor adaptor = Runtime.schedulerStateManagerAdaptor(runtime);
-    PackingPlans.PackingPlan protoPackingPlan = adaptor.getPackingPlan(topology.getName());
-    PackingPlanProtoDeserializer deserializer = new PackingPlanProtoDeserializer();
-    return deserializer.fromProto(protoPackingPlan);
   }
 
   private int contains(List<TopologyAPI.Spout> spouts, String name) {

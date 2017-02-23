@@ -15,7 +15,6 @@ package com.twitter.heron.healthmgr.detector;
 
 
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
@@ -33,6 +32,7 @@ import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 public class DataSkewDetector implements IDetector<ComponentBottleneck> {
   private static final Logger LOG = Logger.getLogger(DataSkewDetector.class.getName());
 
+  public static final String AVG_PENDING_PACKETS = "__connection_buffer_by_intanceid";
   private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
 
@@ -110,35 +110,57 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
   }
 
   static int compareExecuteCounts(ComponentBottleneck bottleneck) {
-    double sumBPExecuteCounts = 0;
-    double sumNonBPExecuteCounts = 0;
-    int bpInstanceCount = 0;
-
-    final int totalInstances = bottleneck.getInstances().size();
-
-    for (int j = 0; j < totalInstances; j++) {
-      InstanceInfo instanceData = bottleneck.getInstances().get(j).getInstanceData();
+    // EC and ex below stand for execution count
+    double exMax = Double.MIN_VALUE;
+    double exMin = Double.MAX_VALUE;
+    for (InstanceBottleneck instance : bottleneck.getInstances()) {
       double executionCount =
-          Double.parseDouble(instanceData.getMetricValue(EXECUTION_COUNT_METRIC));
-      LOG.log(Level.INFO, "Instance: {0}, executeCount: {1}",
-          new Object[]{instanceData.getInstanceNameId(), executionCount});
-      if (instanceData.getMetricValue(BACKPRESSURE_METRIC).equals("0.0")) {
-        sumNonBPExecuteCounts += executionCount;
-      } else {
-        sumBPExecuteCounts += executionCount;
-        bpInstanceCount++;
+          Double.parseDouble(instance.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC));
+      exMax = exMax < executionCount ? executionCount : exMax;
+      exMin = exMin > executionCount ? executionCount : exMin;
+    }
+
+    if (exMax > 2.5 * exMin) {
+      // there is wide gap between max and min executionCount, potential skew
+      for (InstanceBottleneck instance : bottleneck.getInstances()) {
+        InstanceInfo data = instance.getInstanceData();
+        double executionCount = Double.parseDouble(data.getMetricValue(EXECUTION_COUNT_METRIC));
+        if (exMax < executionCount * 2) {
+          double bpValue = Double.parseDouble(data.getMetricValue(BACKPRESSURE_METRIC));
+          if (bpValue > 0) {
+            LOG.info(String.format("SKEW: %s:%d back-pressure(%d) and high execution count: %d",
+                data.getInstanceNameId(), data.getInstanceNameId(), bpValue, executionCount));
+            return 1; // skew
+          }
+        }
       }
     }
 
-    double avgBPExecuteCount = sumBPExecuteCounts / bpInstanceCount;
-    double avgNonBPExecuteCount = sumNonBPExecuteCounts / (totalInstances - bpInstanceCount);
-
-    if (bpInstanceCount < totalInstances && avgBPExecuteCount > 2 * avgNonBPExecuteCount) {
-      return 1; // data skew
-    } else if (bpInstanceCount < totalInstances && avgBPExecuteCount < 0.5 * avgNonBPExecuteCount) {
-      return -1; // slow instance
-    } else {
-      return 0;
+    double bufferMax = Double.MIN_VALUE;
+    double bufferMin = Double.MAX_VALUE;
+    for (InstanceBottleneck instance : bottleneck.getInstances()) {
+      double bufferSize =
+          Double.parseDouble(instance.getInstanceData().getMetricValue(AVG_PENDING_PACKETS));
+      bufferMax = bufferMax < bufferSize ? bufferSize : bufferMax;
+      bufferMin = bufferMin > bufferSize ? bufferSize : bufferMin;
     }
+
+    if (bufferMax > 25 * bufferMin) {
+      // there is wide gap between max and min bufferSize, potential slow instance
+      for (InstanceBottleneck instance : bottleneck.getInstances()) {
+        InstanceInfo data = instance.getInstanceData();
+        double bufferSize = Double.parseDouble(data.getMetricValue(AVG_PENDING_PACKETS));
+        if (bufferMax < bufferSize * 25) {
+          double bpValue = Double.parseDouble(data.getMetricValue(BACKPRESSURE_METRIC));
+          if (bpValue > 0) {
+            LOG.info(String.format("SLOW: %s:%d back-pressure(%d) and high buffer size: %d",
+                data.getInstanceNameId(), data.getInstanceNameId(), bpValue, bufferSize));
+            return -1; // slow instance
+          }
+        }
+      }
+    }
+
+    return 0;
   }
 }
