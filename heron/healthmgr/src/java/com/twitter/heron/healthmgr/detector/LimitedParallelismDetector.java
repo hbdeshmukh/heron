@@ -47,26 +47,8 @@ public class LimitedParallelismDetector implements IDetector<ComponentBottleneck
 
   @Override
   public Diagnosis<ComponentBottleneck> detect(TopologyAPI.Topology topology) {
-    Diagnosis<ComponentBottleneck> backPressuredDiagnosis =
-        detectorService.run(backpressureDetector, topology);
-
-    Diagnosis<ComponentBottleneck> executeCountDiagnosis =
-        detectorService.run(executeCountDetector, topology);
-
-    Set<ComponentBottleneck> backPressureSummary = backPressuredDiagnosis.getSummary();
-    Set<ComponentBottleneck> executeCountSummary = executeCountDiagnosis.getSummary();
-
-    if (backPressureSummary.size() != 0 && executeCountSummary.size() != 0) {
-      BottleneckUtils.merge(backPressureSummary, executeCountSummary);
-
-      ComponentBottleneck current = backPressureSummary.iterator().next();
-      if (existsLimitedParallelism(current)) {
-        Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
-        currentDiagnosis.addToDiagnosis(current);
-        return currentDiagnosis;
-      }
-    }
-    return null;
+    return DataSkewDetector
+        .commonDiagnosis(runtime, topology, backpressureDetector, executeCountDetector, 0);
   }
 
   @Override
@@ -101,9 +83,5 @@ public class LimitedParallelismDetector implements IDetector<ComponentBottleneck
   public void close() {
     backpressureDetector.close();
     executeCountDetector.close();
-  }
-
-  private boolean existsLimitedParallelism(ComponentBottleneck current) {
-    return DataSkewDetector.compareExecuteCounts(current) == 0;
   }
 }

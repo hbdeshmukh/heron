@@ -14,6 +14,7 @@
 package com.twitter.heron.healthmgr.detector;
 
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -28,6 +29,8 @@ import com.twitter.heron.spi.healthmgr.IDetector;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
 import com.twitter.heron.spi.healthmgr.InstanceInfo;
 import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
+import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
+import com.twitter.heron.spi.packing.PackingPlan;
 
 public class DataSkewDetector implements IDetector<ComponentBottleneck> {
   private static final Logger LOG = Logger.getLogger(DataSkewDetector.class.getName());
@@ -41,39 +44,16 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
   private BackPressureDetector backpressureDetector = new BackPressureDetector();
   private ReportingDetector executeCountDetector = new ReportingDetector(EXECUTION_COUNT_METRIC);
 
-  private DetectorService detectorService;
-
   @Override
   public void initialize(Config config, Config inputRuntime) {
     this.runtime = inputRuntime;
     this.backpressureDetector.initialize(config, inputRuntime);
     this.executeCountDetector.initialize(config, inputRuntime);
-    detectorService = (DetectorService) Runtime
-        .getDetectorService(runtime);
   }
 
   @Override
   public Diagnosis<ComponentBottleneck> detect(TopologyAPI.Topology topology) {
-    Diagnosis<ComponentBottleneck> backPressuredDiagnosis =
-        detectorService.run(backpressureDetector, topology);
-
-    Diagnosis<ComponentBottleneck> executeCountDiagnosis =
-        detectorService.run(executeCountDetector, topology);
-
-    Set<ComponentBottleneck> backPressureSummary = backPressuredDiagnosis.getSummary();
-    Set<ComponentBottleneck> executeCountSummary = executeCountDiagnosis.getSummary();
-
-    if (backPressureSummary.size() != 0 && executeCountSummary.size() != 0) {
-      BottleneckUtils.merge(backPressureSummary, executeCountSummary);
-
-      ComponentBottleneck current = backPressureSummary.iterator().next();
-      if (existsDataSkew(current)) {
-        Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
-        currentDiagnosis.addToDiagnosis(current);
-        return currentDiagnosis;
-      }
-    }
-    return null;
+    return commonDiagnosis(runtime, topology, backpressureDetector, executeCountDetector, 1);
   }
 
 
@@ -105,8 +85,43 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
     executeCountDetector.close();
   }
 
-  private boolean existsDataSkew(ComponentBottleneck current) {
-    return compareExecuteCounts(current) == 1;
+  static Diagnosis<ComponentBottleneck> commonDiagnosis(Config runtime,
+                                                        TopologyAPI.Topology topology,
+                                                        BackPressureDetector backpressureDetector,
+                                                        ReportingDetector executeCountDetector,
+                                                        int expected) {
+    DetectorService detectorService = (DetectorService) Runtime.getDetectorService(runtime);
+    SinkVisitor visitor = Runtime.metricsReader(runtime);
+    PackingPlan packingPlan = BackPressureDetector.getPackingPlan(topology, runtime);
+
+    Diagnosis<ComponentBottleneck> backPressuredDiagnosis =
+        detectorService.run(backpressureDetector, topology);
+
+    Diagnosis<ComponentBottleneck> executeCountDiagnosis =
+        detectorService.run(executeCountDetector, topology);
+
+    Set<ComponentBottleneck> backPressureSummary = backPressuredDiagnosis.getSummary();
+    Set<ComponentBottleneck> executeCountSummary = executeCountDiagnosis.getSummary();
+    Set<ComponentBottleneck> pendingBufferPacket = new HashSet<>();
+    pendingBufferPacket.addAll(SLAManagerUtils.retrieveMetricValues(
+        DataSkewDetector.AVG_PENDING_PACKETS, "packets", "__stmgr__", visitor, packingPlan)
+        .values());
+
+    if (backPressureSummary.size() > 0
+        && executeCountSummary.size() > 0
+        && pendingBufferPacket.size() > 0) {
+      BottleneckUtils.merge(backPressureSummary, executeCountSummary);
+      BottleneckUtils.merge(backPressureSummary, pendingBufferPacket);
+
+      ComponentBottleneck current = backPressureSummary.iterator().next();
+      if (compareExecuteCounts(current) == expected) {
+        Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
+        currentDiagnosis.addToDiagnosis(current);
+        LOG.info(current.toString());
+        return currentDiagnosis;
+      }
+    }
+    return null;
   }
 
   static int compareExecuteCounts(ComponentBottleneck bottleneck) {
@@ -120,16 +135,18 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
       exMin = exMin > executionCount ? executionCount : exMin;
     }
 
-    if (exMax > 2.5 * exMin) {
+    LOG.info("execute count max:" + exMax + " min:" + exMin);
+
+    if (exMax > 1.5 * exMin) {
       // there is wide gap between max and min executionCount, potential skew
       for (InstanceBottleneck instance : bottleneck.getInstances()) {
         InstanceInfo data = instance.getInstanceData();
         double executionCount = Double.parseDouble(data.getMetricValue(EXECUTION_COUNT_METRIC));
-        if (exMax < executionCount * 2) {
+        if (exMax < executionCount * 1.25) {
           double bpValue = Double.parseDouble(data.getMetricValue(BACKPRESSURE_METRIC));
           if (bpValue > 0) {
-            LOG.info(String.format("SKEW: %s:%d back-pressure(%d) and high execution count: %d",
-                data.getInstanceNameId(), data.getInstanceNameId(), bpValue, executionCount));
+            LOG.info(String.format("SKEW: %s:%d back-pressure(%f) and high execution count: %f",
+                data.getInstanceNameId(), data.getInstanceId(), bpValue, executionCount));
             return 1; // skew
           }
         }
@@ -145,6 +162,8 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
       bufferMin = bufferMin > bufferSize ? bufferSize : bufferMin;
     }
 
+    LOG.info("bufferMax:" + bufferMax + " bufferMin:" + bufferMin);
+
     if (bufferMax > 25 * bufferMin) {
       // there is wide gap between max and min bufferSize, potential slow instance
       for (InstanceBottleneck instance : bottleneck.getInstances()) {
@@ -153,14 +172,15 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
         if (bufferMax < bufferSize * 25) {
           double bpValue = Double.parseDouble(data.getMetricValue(BACKPRESSURE_METRIC));
           if (bpValue > 0) {
-            LOG.info(String.format("SLOW: %s:%d back-pressure(%d) and high buffer size: %d",
-                data.getInstanceNameId(), data.getInstanceNameId(), bpValue, bufferSize));
+            LOG.info(String.format("SLOW: %s:%d back-pressure(%f) and high buffer size: %f",
+                data.getInstanceNameId(), data.getInstanceId(), bpValue, bufferSize));
             return -1; // slow instance
           }
         }
       }
     }
 
+    LOG.info(String.format("SCALE: Limited parallelism issue"));
     return 0;
   }
 }

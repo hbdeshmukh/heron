@@ -95,7 +95,7 @@ public class SpoutScaleUpResolver implements IResolver<ComponentBottleneck> {
     }
 
     try {
-      TimeUnit.MINUTES.sleep(5);
+      TimeUnit.MINUTES.sleep(6);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
