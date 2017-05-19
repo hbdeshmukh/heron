@@ -40,6 +40,7 @@ public class TrackerVisitor implements SinkVisitor {
   public static final int INTERVAL = 300;
 
   private WebTarget baseTarget;
+  private WebTarget baseTargetWithStartAndEndTimes;
 
   @Override
   public void initialize(Config conf, Config runtime) {
@@ -54,6 +55,12 @@ public class TrackerVisitor implements SinkVisitor {
         .queryParam("environ", "default")
         .queryParam("topology", topology.getName())
         .queryParam("interval", INTERVAL);
+
+    this.baseTargetWithStartAndEndTimes = client.target(trackerURL)
+            .path("topologies/metricstimeline")
+            .queryParam("cluster", Context.cluster(conf))
+            .queryParam("environ", "default")
+            .queryParam("topology", topology.getName());
   }
 
   @Override
@@ -62,6 +69,23 @@ public class TrackerVisitor implements SinkVisitor {
     for (int j = 0; j < component.length; j++) {
       WebTarget target = baseTarget.queryParam("metricname", metric)
           .queryParam("component", component[j]);
+      Response r = target.request(MediaType.APPLICATION_JSON_TYPE).get();
+      TrackerOutput result = r.readEntity(TrackerOutput.class);
+
+      List<MetricsInfo> tmp = convert(result, metric);
+      metricsInfo.addAll(tmp);
+    }
+    return metricsInfo;
+  }
+
+  @Override
+  public Collection<MetricsInfo> getNextMetric(String metric, long startTime, long endTime, String... component) {
+    List<MetricsInfo> metricsInfo = new ArrayList<MetricsInfo>();
+    for (int j = 0; j < component.length; j++) {
+      WebTarget target = baseTargetWithStartAndEndTimes.queryParam("metricname", metric)
+              .queryParam("component", component[j])
+              .queryParam("starttime", startTime)
+              .queryParam("endtime", endTime);
       Response r = target.request(MediaType.APPLICATION_JSON_TYPE).get();
       TrackerOutput result = r.readEntity(TrackerOutput.class);
 

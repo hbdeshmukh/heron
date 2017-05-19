@@ -65,6 +65,68 @@ public final class SLAManagerUtils {
     return results;
   }
 
+  public static HashMap<String, ComponentBottleneck> retrieveMetricValuesForInterval(String metricName,
+                                                                                     String metricExtension,
+                                                                                     String component,
+                                                                                     SinkVisitor visitor,
+                                                                                     long startTime,
+                                                                                     long endTime,
+                                                                                     PackingPlan packingPlan) {
+    HashMap<String, ComponentBottleneck> results = new HashMap<>();
+    for (PackingPlan.ContainerPlan containerPlan : packingPlan.getContainers()) {
+      for (PackingPlan.InstancePlan instancePlan : containerPlan.getInstances()) {
+        String metricValue = getMetricValueForInterval(metricName, metricExtension,
+                component, visitor, containerPlan, startTime, endTime,
+                instancePlan);
+        if (metricValue == null) {
+          continue;
+        }
+
+        ComponentBottleneck currentBottleneck = results.get(instancePlan.getComponentName());
+        if (currentBottleneck == null) {
+          currentBottleneck = new ComponentBottleneck(instancePlan.getComponentName());
+        }
+
+        Set<MetricsInfo> metrics = new HashSet<>();
+        MetricsInfo metric = new MetricsInfo(metricName, metricValue);
+        metrics.add(metric);
+        currentBottleneck.add(containerPlan.getId(), instancePlan, metrics);
+        results.put(instancePlan.getComponentName(), currentBottleneck);
+      }
+    }
+    return results;
+  }
+
+  public static String getMetricValueForInterval(String metricName, String metricExtension,
+                                      String component, SinkVisitor visitor,
+                                      PackingPlan.ContainerPlan containerPlan,
+                                      long startTime, long endTime,
+                                      PackingPlan.InstancePlan instancePlan) {
+    String name = "container_" + containerPlan.getId()
+            + "_" + instancePlan.getComponentName()
+            + "_" + instancePlan.getTaskId();
+    //System.out.println(BACKPRESSURE_METRIC +"/" + name);
+    String newMetricName;
+    if(metricExtension.equals("")){
+      newMetricName = metricName + "/" + name;
+    }
+    else{
+      newMetricName = metricName + "/" + name + "/" + metricExtension;
+    }
+    Collection<MetricsInfo> metricsResults =
+            visitor.getNextMetric(newMetricName, startTime, endTime, component);
+    if (metricsResults.size() > 1) {
+      throw new IllegalStateException(
+              String.format("More than one metric (%d) received for %s", metricsResults.size(),
+                      metricName));
+    }
+
+    if (metricsResults.isEmpty()) {
+      return null;
+    }
+    return metricsResults.iterator().next().getValue();
+  }
+
   public static String getMetricValue(String metricName, String metricExtension,
                                       String component, SinkVisitor visitor,
                                       PackingPlan.ContainerPlan containerPlan,

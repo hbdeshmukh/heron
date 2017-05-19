@@ -40,6 +40,17 @@ public interface SinkVisitor extends AutoCloseable {
   Collection<MetricsInfo> getNextMetric(String metric, String... component);
 
   /**
+   * Retrieve the result of a metric during a specified duration.
+   *
+   * @param metric The name of the metric.
+   * @param startTime The start time stamp of the duration.
+   * @param endTime The end time stamp of the duration.
+   * @param component
+   * @return The name of the metric.
+   */
+  Collection<MetricsInfo> getNextMetric(String metric, long startTime, long endTime, String... component);
+
+  /**
    * Close the sink visitor
    */
   void close();
