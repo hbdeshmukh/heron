@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.services.DetectorService;
+import com.twitter.heron.healthmgr.utils.CurveFitter;
 import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.utils.Runtime;
@@ -126,21 +127,19 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
   }
 
   private boolean isIncreasingSequence(List<Double> data) {
-    if (data.size() > 1) {
-      for (int i = 0; i < data.size() - 1; i++) {
-        if (data.get(i) > data.get(i + 1)) {
-          return false;
-        }
-      }
+    CurveFitter curveFitter = new CurveFitter();
+    List<Double> xPoints = new ArrayList<>();
+    for (int i = 0; i < data.size(); i++) {
+      xPoints.add(new Double(i));
     }
-    return true;
+    curveFitter.linearCurveFit(xPoints, data);
+    return curveFitter.getSlope() > 0;
   }
 
   private List<Boolean> findTrends(HashMap<String, List<ComponentBottleneck>> observations, String userComponent) {
     // For each instance, find its trend.
     // Note - this is not efficient.
     List<Boolean> result = new ArrayList<>();
-    Set<String> keys = observations.keySet();
     // We assume only one key in the above set.
     assert observations.containsKey(userComponent);
     List<ComponentBottleneck> values = observations.get(userComponent);
@@ -154,7 +153,6 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
         // TODO(harshad) - Pass the metric name (right now hard coded to AVG_PENDING_PACKETS) to this function.
         instanceMetrics.add(values.get(bottleneckID).getDataPoints(AVG_PENDING_PACKETS)[instanceID]);
       }
-      // TODO(harshad) - Replace the method below with something smarter that performs trend analysis.
       result.add(isIncreasingSequence(instanceMetrics));
     }
     return result;
@@ -162,7 +160,6 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
 
   @Override
   public void close() {
-    //this.bufferRateDetector.close();
   }
 }
 
