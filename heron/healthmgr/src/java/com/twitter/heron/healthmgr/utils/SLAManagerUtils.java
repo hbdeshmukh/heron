@@ -13,11 +13,8 @@
 // limitations under the License.
 package com.twitter.heron.healthmgr.utils;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import org.apache.commons.math3.fitting.PolynomialCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoints;
 
 import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
@@ -26,6 +23,13 @@ import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.InstanceId;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlan.InstancePlan;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public final class SLAManagerUtils {
 
@@ -65,47 +69,79 @@ public final class SLAManagerUtils {
     return results;
   }
 
-  public static HashMap<String, ComponentBottleneck> retrieveMetricValuesForInterval(String metricName,
-                                                                                     String metricExtension,
-                                                                                     String component,
-                                                                                     SinkVisitor visitor,
-                                                                                     long startTime,
-                                                                                     long endTime,
-                                                                                     PackingPlan packingPlan) {
-    HashMap<String, ComponentBottleneck> results = new HashMap<>();
+  /**
+   *
+   * @param metricName
+   * @param metricExtension
+   * @param component
+   * @param visitor
+   * @param startTime
+   * @param endTime
+   * @param packingPlan
+   * @return A map where the key is the component name and the value is a list of {@link ComponentBottlenecks}.
+   *         If the interval is made up of N small subintervals, the length of this list will be N (assuming that
+   *         we have N such observations with us).
+   */
+  public static HashMap<String, List<ComponentBottleneck>> retrieveMetricValuesForInterval(String metricName,
+                                                                                           String metricExtension,
+                                                                                           String component,
+                                                                                           SinkVisitor visitor,
+                                                                                           long startTime,
+                                                                                           long endTime,
+                                                                                           PackingPlan packingPlan) {
+    HashMap<String, List<ComponentBottleneck>> results = new HashMap<>();
     for (PackingPlan.ContainerPlan containerPlan : packingPlan.getContainers()) {
       for (PackingPlan.InstancePlan instancePlan : containerPlan.getInstances()) {
-        String metricValue = getMetricValueForInterval(metricName, metricExtension,
+        List<String> metricValue = getMetricValueForInterval(metricName, metricExtension,
                 component, visitor, containerPlan, startTime, endTime,
                 instancePlan);
-        if (metricValue == null) {
-          continue;
+        if (metricValue != null) {
+          // For each observation in metricValue, construct a ComponentBottleneck and append it to a list.
+          if (!results.containsKey(instancePlan.getComponentName())) {
+            // Create a list first.
+            results.put(instancePlan.getComponentName(), new ArrayList<ComponentBottleneck>());
+          }
+          boolean listIsEmpty = results.get(instancePlan.getComponentName()).isEmpty();
+          if (listIsEmpty) {
+            // The ith entry represents the (i+1)th intervals since the beginning of the topology.
+            // Construct a list of ComponentBottlenecks.
+            List<ComponentBottleneck> componentBottlenecksList = results.get(instancePlan.getComponentName());
+            // Create as many ComponentBottleneck instances in this list as the number of observations.
+            for (int i = 0; i < metricValue.size(); i++) {
+              componentBottlenecksList.add(new ComponentBottleneck(component));
+            }
+            for (int i = 0; i < metricValue.size(); i++) {
+              Set<MetricsInfo> metricsForNewBottleneck = new HashSet<>();
+              metricsForNewBottleneck.add(new MetricsInfo(metricName, metricValue.get(i)));
+              componentBottlenecksList.get(i).add(containerPlan.getId(), instancePlan, metricsForNewBottleneck);
+            }
+          } else {
+            // There is already a list of componentBottlenecks in the hash map.
+            // Make sure the number of readings are the same.
+            List<ComponentBottleneck> existingBottlenecks = results.get(instancePlan.getComponentName());
+            assert existingBottlenecks.size() == metricValue.size();
+            for (int metricCounter = 0; metricCounter < metricValue.size(); ++metricCounter) {
+              // We first need to construct a set of MetricsInfo to construct a ComponentBottleneck object.
+              Set<MetricsInfo> metricsForNewBottleneck = new HashSet<>();
+              metricsForNewBottleneck.add(new MetricsInfo(metricName, metricValue.get(metricCounter)));
+              // With the set of MetricsInfo just constructed, append a ComponentBottleneck in the hash map's value.
+              results.get(instancePlan.getComponentName()).get(metricCounter).add(containerPlan.getId(), instancePlan, metricsForNewBottleneck);
+            }
+          }
         }
-
-        ComponentBottleneck currentBottleneck = results.get(instancePlan.getComponentName());
-        if (currentBottleneck == null) {
-          currentBottleneck = new ComponentBottleneck(instancePlan.getComponentName());
-        }
-
-        Set<MetricsInfo> metrics = new HashSet<>();
-        MetricsInfo metric = new MetricsInfo(metricName, metricValue);
-        metrics.add(metric);
-        currentBottleneck.add(containerPlan.getId(), instancePlan, metrics);
-        results.put(instancePlan.getComponentName(), currentBottleneck);
       }
     }
     return results;
   }
 
-  public static String getMetricValueForInterval(String metricName, String metricExtension,
-                                      String component, SinkVisitor visitor,
-                                      PackingPlan.ContainerPlan containerPlan,
-                                      long startTime, long endTime,
-                                      PackingPlan.InstancePlan instancePlan) {
+  public static List<String> getMetricValueForInterval(String metricName, String metricExtension,
+                                                       String component, SinkVisitor visitor,
+                                                       PackingPlan.ContainerPlan containerPlan,
+                                                       long startTime, long endTime,
+                                                       PackingPlan.InstancePlan instancePlan) {
     String name = "container_" + containerPlan.getId()
             + "_" + instancePlan.getComponentName()
             + "_" + instancePlan.getTaskId();
-    //System.out.println(BACKPRESSURE_METRIC +"/" + name);
     String newMetricName;
     if(metricExtension.equals("")){
       newMetricName = metricName + "/" + name;
@@ -115,16 +151,16 @@ public final class SLAManagerUtils {
     }
     Collection<MetricsInfo> metricsResults =
             visitor.getNextMetric(newMetricName, startTime, endTime, component);
-    if (metricsResults.size() > 1) {
-      throw new IllegalStateException(
-              String.format("More than one metric (%d) received for %s", metricsResults.size(),
-                      metricName));
-    }
 
     if (metricsResults.isEmpty()) {
       return null;
     }
-    return metricsResults.iterator().next().getValue();
+
+    List<String> metrics = new ArrayList<>();
+    for (MetricsInfo m : metricsResults) {
+      metrics.add(m.getValue());
+    }
+    return metrics;
   }
 
   public static String getMetricValue(String metricName, String metricExtension,
@@ -352,5 +388,4 @@ public final class SLAManagerUtils {
     }
     return false;
   }
-
 }

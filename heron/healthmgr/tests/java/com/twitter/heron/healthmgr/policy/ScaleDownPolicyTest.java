@@ -102,7 +102,7 @@ public class ScaleDownPolicyTest {
 
     ScaleDownPolicy policy = new ScaleDownPolicy();
     policy.initialize(config, runtime);
-    policy.setPacketsThreshold(200);
+    //policy.setPacketsThreshold(200);
     policy.execute();
 
     TimeUnit.MINUTES.sleep(2);
