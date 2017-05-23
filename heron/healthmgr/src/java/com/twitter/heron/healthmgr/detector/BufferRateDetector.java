@@ -133,6 +133,7 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
       xPoints.add(new Double(i));
     }
     curveFitter.linearCurveFit(xPoints, data);
+    System.out.println(curveFitter);
     return curveFitter.getSlope() > 0;
   }
 
