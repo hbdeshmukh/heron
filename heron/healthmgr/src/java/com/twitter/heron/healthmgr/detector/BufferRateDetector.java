@@ -23,11 +23,10 @@ import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.healthmgr.Bottleneck;
-import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
-import com.twitter.heron.spi.healthmgr.Diagnosis;
-import com.twitter.heron.spi.healthmgr.IDetector;
+import com.twitter.heron.spi.healthmgr.*;
+import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
+import com.twitter.heron.spi.packing.InstanceId;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
@@ -41,18 +40,14 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
   private int packetThreshold = 0;
   private DetectorService detectorService;
   private long singleObservationLength = 600; // The duration of each observation interval in seconds.
+  private long numSecondsBetweenObservations = 60;
   // TODO(harshad) - Verify if metricstimeline API accepts starttime and endtime values in seconds.
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
     this.runtime = inputRuntime;
     this.visitor = Runtime.metricsReader(runtime);
-    //this.bufferRateDetector.initialize(inputConfig, runtime);
     detectorService = (DetectorService) Runtime.getDetectorService(runtime);
-        /*this.packetThreshold =
-                Integer.valueOf(inputConfig.getStringValue("health.policy.scaleup.high.packet.limit"));
-
-        LOG.info("Scale up detector's high packet limit is " + packetThreshold);*/
   }
 
   @Override
@@ -71,22 +66,9 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
             endTime - (singleObservationLength),
             endTime, packingPlan);
 
-    List<Boolean> trends = findTrends(resultsForAllIntervals, "split");
+    Set<ComponentBottleneck> trends = findTrends(resultsForAllIntervals);
 
-    Set<ComponentBottleneck> bottlenecks = new HashSet<>();
-    if (trends.contains(Boolean.TRUE)) {
-      // There's at least one increasing trend.
-      List<ComponentBottleneck> allBottlenecks = resultsForAllIntervals.values().iterator().next();
-      // Return the latest bottleneck.
-      bottlenecks.add(allBottlenecks.get(allBottlenecks.size() - 1));
-    }
-
-    // TODO(harshad) - Make sure that the bottlenecks indeed belong to bolts.
-    if (bottlenecks.isEmpty()) {
-      return null;
-    } else {
-      return new Diagnosis<>(bottlenecks);
-    }
+    return new Diagnosis<>(trends);
   }
 
   public static PackingPlan getPackingPlan(TopologyAPI.Topology topology, Config runtime) {
@@ -113,36 +95,59 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
   }
 
   private boolean isIncreasingSequence(List<Double> data) {
+    return getIncreaseRate(data) > 0;
+  }
+
+  private Double getIncreaseRate(List<Double> data) {
     CurveFitter curveFitter = new CurveFitter();
     List<Double> xPoints = new ArrayList<>();
     for (int i = 0; i < data.size(); i++) {
-      xPoints.add(new Double(i * 60));
+      xPoints.add(new Double(i * numSecondsBetweenObservations));
     }
     curveFitter.linearCurveFit(xPoints, data);
     System.out.println(data);
     System.out.println(curveFitter);
-    return curveFitter.getSlope() > 0;
+    return curveFitter.getSlope();
   }
 
-  private List<Boolean> findTrends(HashMap<String, List<ComponentBottleneck>> observations, String userComponent) {
+  private Set<ComponentBottleneck> findTrends(HashMap<String, List<ComponentBottleneck>> observations) {
     // For each instance, find its trend.
-    // Note - this is not efficient. To improve the performance of this method, refactor the InstanceBottleneck class
-    // so that it has a list of metric values.
-    List<Boolean> result = new ArrayList<>();
-    // We assume only one key in the above set.
-    assert observations.containsKey(userComponent);
-    List<ComponentBottleneck> values = observations.get(userComponent);
-    // Find the number of instances. This is a big assumptions that number of observations is the same as number of instances.
-    final int numInstances = values.get(values.size() - 1).getInstances().size();
-    for (int instanceID = 0; instanceID < numInstances; instanceID++) {
-      // Construct a sequence of Doubles for each instance.
-      List<Double> instanceMetrics = new ArrayList<>();
-      for (int bottleneckID = 0; bottleneckID < values.size(); bottleneckID++) {
-        // Get the metric for the give instance in the current bottleneck.
-        // TODO(harshad) - Pass the metric name (right now hard coded to AVG_PENDING_PACKETS) to this function.
-        instanceMetrics.add(values.get(bottleneckID).getDataPoints(AVG_PENDING_PACKETS)[instanceID]);
+    /* TODO(harshad) To improve the performance of this method, refactor the InstanceBottleneck class
+    so that it has a list of metric values.*/
+    Set<ComponentBottleneck> result = new HashSet<>();
+    Set<String> componentNames = observations.keySet();
+    for (String currComponentName : componentNames) {
+      // First construct a bottleneck class for the current component.
+      ComponentBottleneck currComponentBottleneck = new ComponentBottleneck(currComponentName);
+      List<ComponentBottleneck> currComponentInstances = observations.get(currComponentName);
+      // We assume that all instances produce same number of observations.
+      // To get the number of instances, we refer to the last observation.
+      final int numInstances = currComponentInstances.get(currComponentInstances.size() - 1).getInstances().size();
+      for (int instanceID = 0; instanceID < numInstances; instanceID++) {
+        // Construct a sequence of Doubles for each instance.
+        List<Double> instanceMetrics = new ArrayList<>();
+        InstanceInfo currInstanceInfo = currComponentInstances.get(currComponentInstances.size() - 1).getInstances().get(instanceID).getInstanceData();
+        final int currInstanceId = currInstanceInfo.getInstanceId();
+        final int currInstanceContainerId = currInstanceInfo.getContainerId();
+        for (int bottleneckID = 0; bottleneckID < currComponentInstances.size(); bottleneckID++) {
+          // Get the metric for the given instance in the current bottleneck.
+          // TODO(harshad) - Pass the metric name (right now hard coded to AVG_PENDING_PACKETS) to this function.
+          instanceMetrics.add(currComponentInstances.get(bottleneckID).getDataPoints(AVG_PENDING_PACKETS)[instanceID]);
+        }
+        // Now get the rate of increase in buffered packets for this instance.
+        Double bufferedPacketsIncreaseRate = getIncreaseRate(instanceMetrics);
+        Set<MetricsInfo> currInstanceMetricsInfo = new HashSet<>();
+        currInstanceMetricsInfo
+                .add(new MetricsInfo(currComponentName + Integer.toString(currInstanceId),
+                        bufferedPacketsIncreaseRate.toString()));
+        // Create
+        currComponentBottleneck
+                .add(currInstanceContainerId,
+                        new PackingPlan.
+                          InstancePlan(new InstanceId(currComponentName, currInstanceId, 0), null),
+                        currInstanceMetricsInfo);
       }
-      result.add(isIncreasingSequence(instanceMetrics));
+      result.add(currComponentBottleneck);
     }
     return result;
   }
