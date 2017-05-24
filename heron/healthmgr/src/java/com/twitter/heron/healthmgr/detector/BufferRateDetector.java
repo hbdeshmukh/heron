@@ -40,7 +40,7 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
   private Config runtime;
   private int packetThreshold = 0;
   private DetectorService detectorService;
-  private long singleObservationLength = 2000; // The duration of each observation interval in seconds.
+  private long singleObservationLength = 600; // The duration of each observation interval in seconds.
   // TODO(harshad) - Verify if metricstimeline API accepts starttime and endtime values in seconds.
 
   @Override
@@ -112,34 +112,22 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
     return false;
   }
 
-  private boolean isDescendingSequence(List<ComponentBottleneck> bottlenecks) {
-    for (int i = 0; i < bottlenecks.size() - 1; i++) {
-      Double[] dataPoints1 = bottlenecks.get(i).getDataPoints(AVG_PENDING_PACKETS);
-      Double[] dataPoints2 = bottlenecks.get(i + 1).getDataPoints(AVG_PENDING_PACKETS);
-      if (dataPoints1.length == 1 && dataPoints2.length == 1) {
-        if (dataPoints1[0] < dataPoints2[0]) {
-          // Found an increasing subsequence.
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
   private boolean isIncreasingSequence(List<Double> data) {
     CurveFitter curveFitter = new CurveFitter();
     List<Double> xPoints = new ArrayList<>();
     for (int i = 0; i < data.size(); i++) {
-      xPoints.add(new Double(i));
+      xPoints.add(new Double(i * 60));
     }
     curveFitter.linearCurveFit(xPoints, data);
+    System.out.println(data);
     System.out.println(curveFitter);
     return curveFitter.getSlope() > 0;
   }
 
   private List<Boolean> findTrends(HashMap<String, List<ComponentBottleneck>> observations, String userComponent) {
     // For each instance, find its trend.
-    // Note - this is not efficient.
+    // Note - this is not efficient. To improve the performance of this method, refactor the InstanceBottleneck class
+    // so that it has a list of metric values.
     List<Boolean> result = new ArrayList<>();
     // We assume only one key in the above set.
     assert observations.containsKey(userComponent);
@@ -163,5 +151,3 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
   public void close() {
   }
 }
-
-

@@ -62,7 +62,6 @@ public class CurveFitter {
    */
   public void linearCurveFit(List<Double> x, List<Double> y) {
     assert x.size() == y.size();
-    System.out.println(y);
     // NOTE - The SimpleRegression model requires at least three data points.
     assert x.size() >= 3;
     SimpleRegression simpleRegression = new SimpleRegression(true);

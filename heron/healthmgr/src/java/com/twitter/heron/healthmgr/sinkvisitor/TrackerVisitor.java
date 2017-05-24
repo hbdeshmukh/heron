@@ -102,21 +102,22 @@ public class TrackerVisitor implements SinkVisitor {
             JsonNode node = metricNode.get(fieldName);
             // We need to sort the metrics using the timestamps as the key.
             Iterator<Map.Entry<String, JsonNode>> metrics = node.fields();
-            Map<Double, String> metricsSortedByTimeStamp = new TreeMap<>();
+            // Key = timestamp, value = the metric's value.
+            Map<Long, Double> metricsSortedByTimeStamp = new TreeMap<>();
             while (metrics.hasNext()) {
               Map.Entry<String, JsonNode> currNode = metrics.next();
               String value = currNode.getValue().asText();
               String key = currNode.getKey();
               try {
                 Double metricValueAsDouble = Double.parseDouble(value);
-                metricsSortedByTimeStamp.put(metricValueAsDouble, value);
+                metricsSortedByTimeStamp.put(Long.parseLong(key), metricValueAsDouble);
               } catch(NumberFormatException ne) {
                 // The metric value is not a number, ignore the entry.
               }
             }
             // Now iterate over metricsSortedByTimeStamp and insert the sorted entries in metricsInfo.
-            for (Double currTimestamp : metricsSortedByTimeStamp.keySet()) {
-              metricsInfo.add(new MetricsInfo(metric, metricsSortedByTimeStamp.get(currTimestamp)));
+            for (Long currTimestamp : metricsSortedByTimeStamp.keySet()) {
+              metricsInfo.add(new MetricsInfo(metric, metricsSortedByTimeStamp.get(currTimestamp).toString()));
             }
           }
         }
