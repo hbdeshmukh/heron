@@ -33,30 +33,37 @@ import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
 public class BufferRateDetector implements IDetector<ComponentBottleneck> {
 
-  private static final Logger LOG = Logger.getLogger(LowPendingPacketsDetector.class.getName());
+  private static final Logger LOG = Logger.getLogger(BufferRateDetector.class.getName());
   private static final String AVG_PENDING_PACKETS = "__connection_buffer_by_intanceid";
+  private static final String BUFFER_GROWTH_RATE = "__buffer_growth_rate";
+  private static final String LATEST_BUFFER_SIZE_BYTES = "__latest_buffer_size_bytes";
   private SinkVisitor visitor;
   private Config runtime;
-  private int packetThreshold = 0;
-  private DetectorService detectorService;
+
+  // TODO(harshad) - Psas the parameter below via config.
   private long singleObservationLength = 600; // The duration of each observation interval in seconds.
   private long numSecondsBetweenObservations = 60;
+  // TODO(harshad) - Psas the parameter below via config.
+  private double bufferIncreaseRateThreshold = 2.0;
   // TODO(harshad) - Verify if metricstimeline API accepts starttime and endtime values in seconds.
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
     this.runtime = inputRuntime;
+    LOG.info("Initializing ...");
+    // System.out.println(runtime.toString());
     this.visitor = Runtime.metricsReader(runtime);
-    detectorService = (DetectorService) Runtime.getDetectorService(runtime);
   }
 
   @Override
   public Diagnosis<ComponentBottleneck> detect(TopologyAPI.Topology topology)
           throws RuntimeException {
-
-    LOG.info("Executing: " + this.getClass().getName());
+    LOG.info("detect");
+    if (runtime == null) {
+      LOG.info("Runtime is null");
+    }
+    LOG.info(runtime.toString());
     PackingPlan packingPlan = getPackingPlan(topology, runtime);
-    //HashMap<String, List<ComponentBottleneck>> resultsForAllIntervals = new HashMap<>();
     long endTime = System.currentTimeMillis() / 1000;
 
     // Key = component name. Value = list of ComponentBottlenecks, where each of the ComponentBottleneck represents
@@ -68,7 +75,11 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
 
     Set<ComponentBottleneck> trends = findTrends(resultsForAllIntervals);
 
-    return new Diagnosis<>(trends);
+    if (trends.isEmpty()) {
+      return new Diagnosis<>();
+    } else {
+      return new Diagnosis<>(trends);
+    }
   }
 
   public static PackingPlan getPackingPlan(TopologyAPI.Topology topology, Config runtime) {
@@ -79,23 +90,10 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
     return deserializer.fromProto(protoPackingPlan);
   }
 
-  private int contains(List<TopologyAPI.Spout> spouts, String name) {
-    for (int i = 0; i < spouts.size(); i++) {
-      if (spouts.get(i).getComp().getName().equals(name)) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
   @Override
   public boolean similarDiagnosis(Diagnosis<ComponentBottleneck> firstDiagnosis,
                                   Diagnosis<ComponentBottleneck> secondDiagnosis) {
     return false;
-  }
-
-  private boolean isIncreasingSequence(List<Double> data) {
-    return getIncreaseRate(data) > 0;
   }
 
   private Double getIncreaseRate(List<Double> data) {
@@ -136,18 +134,19 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
         }
         // Now get the rate of increase in buffered packets for this instance.
         Double bufferedPacketsIncreaseRate = getIncreaseRate(instanceMetrics);
+
         Set<MetricsInfo> currInstanceMetricsInfo = new HashSet<>();
         currInstanceMetricsInfo
-                .add(new MetricsInfo(currComponentName + Integer.toString(currInstanceId),
-                        bufferedPacketsIncreaseRate.toString()));
-        // Create
+                .add(new MetricsInfo(BUFFER_GROWTH_RATE, bufferedPacketsIncreaseRate.toString()));
+        // Get the latest size of the buffer.
+        currInstanceMetricsInfo.add(new MetricsInfo(LATEST_BUFFER_SIZE_BYTES, instanceMetrics.get(instanceMetrics.size() - 1).toString()));
         currComponentBottleneck
-                .add(currInstanceContainerId,
-                        new PackingPlan.
-                          InstancePlan(new InstanceId(currComponentName, currInstanceId, 0), null),
+                .add(currInstanceContainerId, new PackingPlan.InstancePlan(new InstanceId(currComponentName, currInstanceId, 0), null),
                         currInstanceMetricsInfo);
       }
-      result.add(currComponentBottleneck);
+      if (!currComponentBottleneck.getInstances().isEmpty()) {
+        result.add(currComponentBottleneck);
+      }
     }
     return result;
   }

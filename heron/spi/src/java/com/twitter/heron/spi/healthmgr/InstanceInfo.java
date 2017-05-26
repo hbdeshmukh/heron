@@ -15,6 +15,7 @@ package com.twitter.heron.spi.healthmgr;
 
 import java.util.Set;
 
+import com.twitter.heron.proto.system.Metrics;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.packing.PackingPlan.InstancePlan;
 
@@ -82,5 +83,23 @@ public class InstanceInfo {
     throw new RuntimeException("No metric with name " + metric + " not found");
   }
 
+  public boolean hasMetric(String metric) {
+    for (MetricsInfo currentMetric : metrics) {
+      if (currentMetric.getName().equals(metric)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean hasMetricStartsWith(String metricPrefix) {
+    for (MetricsInfo currentMetric : metrics) {
+      if (currentMetric.getName().startsWith(metricPrefix)) {
+        return true;
+      }
+    }
+    return false;
+
+  }
 }
 

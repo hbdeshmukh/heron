@@ -5,7 +5,7 @@ package(default_visibility = ["//visibility:public"])
 action_listener(
     name = "compile_cpp",
     mnemonics = ["CCompile", "CppCompile"],
-    extra_actions = [":checkstyle_cpp"],
+    extra_actions = [],
 )
 
 extra_action(

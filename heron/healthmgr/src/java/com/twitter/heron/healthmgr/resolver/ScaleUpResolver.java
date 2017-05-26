@@ -22,9 +22,12 @@ import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.basics.SysUtils;
+import com.twitter.heron.common.config.SystemConfig;
+import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.scheduler.Scheduler;
 import com.twitter.heron.proto.system.PackingPlans;
+import com.twitter.heron.proto.system.PhysicalPlans;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
@@ -45,13 +48,18 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
   private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
+  private static final String AVG_PENDING_PACKETS_METRIC = "__connection_buffer_by_intanceid";
+  private static final String BUFFER_GROWTH_RATE = "__buffer_growth_rate";
+  private static final String LATEST_BUFFER_SIZE_BYTES = "__latest_buffer_size_bytes";
   private static final Logger LOG = Logger.getLogger(ScaleUpResolver.class.getName());
+
 
   private Config config;
   private Config runtime;
   private ISchedulerClient schedulerClient;
   private int newParallelism;
-
+  // Time in seconds.
+  private Double timeToDrainPendingBuffer = Double.MAX_VALUE;
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
@@ -124,10 +132,12 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   private int computeScaleUpFactor(ComponentBottleneck current) {
     double totalBackpressureTime = 0;
     for (InstanceBottleneck instanceData : current.getInstances()) {
-      int backpressureTime = Integer.valueOf(instanceData.getDataPoint(BACKPRESSURE_METRIC));
-      LOG.log(Level.INFO, "Instance: {0}, back-pressure: {1}",
-          new Object[]{instanceData.getInstanceData().getInstanceNameId(), backpressureTime});
-      totalBackpressureTime += backpressureTime;
+      if (instanceData.hasMetric(BACKPRESSURE_METRIC)) {
+        int backpressureTime = Integer.valueOf(instanceData.getDataPoint(BACKPRESSURE_METRIC));
+        LOG.log(Level.INFO, "Instance: {0}, back-pressure: {1}",
+                new Object[]{instanceData.getInstanceData().getInstanceNameId(), backpressureTime});
+        totalBackpressureTime += backpressureTime;
+      }
     }
 
     if (totalBackpressureTime > 1000) {
@@ -140,12 +150,49 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
     LOG.info("Total back-pressure: " + totalBackpressureTime);
 
-    double unusedCapacity = (1.0 * totalBackpressureTime) / (1000 - totalBackpressureTime);
-    // scale up fencing: do not scale more than 4 times the current size
-    unusedCapacity = unusedCapacity > 4.0 ? 4.0 : unusedCapacity;
-    LOG.info("Unused capacity: " + unusedCapacity);
+    if (Double.compare(totalBackpressureTime, 0.0) > 0) {
+      double unusedCapacity = (1.0 * totalBackpressureTime) / (1000 - totalBackpressureTime);
+      // scale up fencing: do not scale more than 4 times the current size
+      unusedCapacity = unusedCapacity > 4.0 ? 4.0 : unusedCapacity;
+      LOG.info("Unused capacity: " + unusedCapacity);
+      return (int) Math.ceil(current.getInstances().size() * (1 + unusedCapacity));
+    } else {
+      // There is no backpressure in the system. Check if pending buffers are growing.
+      Double totalGrowthRatePerSecond = 0.0;
+      Double totalExecutionCount = 0.0;
+      Double totalPendingBufferSize = 0.0;
+      for (InstanceBottleneck instanceData : current.getInstances()) {
+        if (instanceData.hasMetric(BUFFER_GROWTH_RATE)) {
+          totalGrowthRatePerSecond += Double.valueOf(instanceData.getInstanceData().getMetricValue(AVG_PENDING_PACKETS_METRIC));
+        }
+        if (instanceData.hasMetric(EXECUTION_COUNT_METRIC)) {
+          totalExecutionCount += Double.valueOf(instanceData.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC));
+        }
+        if (instanceData.hasMetric(LATEST_BUFFER_SIZE_BYTES)) {
+          totalPendingBufferSize += Double.valueOf(instanceData.getInstanceData().getMetricValue(LATEST_BUFFER_SIZE_BYTES));
+        }
+      }
 
-    return (int) Math.ceil(current.getInstances().size() * (1 + unusedCapacity));
+      final double totalExecutionRate = totalExecutionCount / TrackerVisitor.INTERVAL;
+
+      // TODO(harshad) - In the for loop above, get the total buffer size.
+      if (Double.compare(totalGrowthRatePerSecond, 0.0) > 0) {
+        // We should scale up.
+        final Double additionalCapacity = (totalGrowthRatePerSecond + totalPendingBufferSize/timeToDrainPendingBuffer);
+        boolean needToScaleUp = (additionalCapacity/totalExecutionRate) > 0.05;
+        if (needToScaleUp) {
+          // scale up fencing: do not scale more than 4 times the current size
+          final double scaleUpMultiplier = Math
+                  .min((additionalCapacity/totalExecutionRate + 1), 4.0);
+          return (int) Math.ceil(scaleUpMultiplier * current.getInstances().size());
+        } else {
+          return 0;
+        }
+      } else {
+        // No need to scale up.
+        return 0;
+      }
+    }
   }
 
   @Override

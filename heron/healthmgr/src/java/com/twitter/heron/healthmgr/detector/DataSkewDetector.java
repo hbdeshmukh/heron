@@ -43,17 +43,19 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
 
   private BackPressureDetector backpressureDetector = new BackPressureDetector();
   private ReportingDetector executeCountDetector = new ReportingDetector(EXECUTION_COUNT_METRIC);
+  private BufferRateDetector bufferRateDetector = new BufferRateDetector();
 
   @Override
   public void initialize(Config config, Config inputRuntime) {
     this.runtime = inputRuntime;
     this.backpressureDetector.initialize(config, inputRuntime);
     this.executeCountDetector.initialize(config, inputRuntime);
+    this.bufferRateDetector.initialize(config, inputRuntime);
   }
 
   @Override
   public Diagnosis<ComponentBottleneck> detect(TopologyAPI.Topology topology) {
-    return commonDiagnosis(runtime, topology, backpressureDetector, executeCountDetector, 1);
+    return commonDiagnosis(runtime, topology, backpressureDetector, executeCountDetector, bufferRateDetector, 1);
   }
 
 
@@ -89,6 +91,7 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
                                                         TopologyAPI.Topology topology,
                                                         BackPressureDetector backpressureDetector,
                                                         ReportingDetector executeCountDetector,
+                                                        BufferRateDetector bufferRateDetector,
                                                         int expected) {
     DetectorService detectorService = (DetectorService) Runtime.getDetectorService(runtime);
     SinkVisitor visitor = Runtime.metricsReader(runtime);
@@ -96,20 +99,17 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
 
     Diagnosis<ComponentBottleneck> backPressuredDiagnosis =
         detectorService.run(backpressureDetector, topology);
-
-    Diagnosis<ComponentBottleneck> executeCountDiagnosis =
-        detectorService.run(executeCountDetector, topology);
-
     Set<ComponentBottleneck> backPressureSummary = backPressuredDiagnosis.getSummary();
-    Set<ComponentBottleneck> executeCountSummary = executeCountDiagnosis.getSummary();
-    Set<ComponentBottleneck> pendingBufferPacket = new HashSet<>();
-    pendingBufferPacket.addAll(SLAManagerUtils.retrieveMetricValues(
-        DataSkewDetector.AVG_PENDING_PACKETS, "packets", "__stmgr__", visitor, packingPlan)
-        .values());
+    if (backPressureSummary.size() > 0) {
+      Diagnosis<ComponentBottleneck> executeCountDiagnosis =
+              detectorService.run(executeCountDetector, topology);
+      Set<ComponentBottleneck> executeCountSummary = executeCountDiagnosis.getSummary();
 
-    if (backPressureSummary.size() > 0
-        && executeCountSummary.size() > 0
-        && pendingBufferPacket.size() > 0) {
+      Set<ComponentBottleneck> pendingBufferPacket = new HashSet<>();
+      pendingBufferPacket.addAll(SLAManagerUtils.retrieveMetricValues(
+              DataSkewDetector.AVG_PENDING_PACKETS, "packets", "__stmgr__", visitor, packingPlan)
+              .values());
+
       BottleneckUtils.merge(backPressureSummary, executeCountSummary);
       BottleneckUtils.merge(backPressureSummary, pendingBufferPacket);
 
@@ -117,9 +117,29 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
       if (compareExecuteCounts(current) == expected) {
         Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
         currentDiagnosis.addToDiagnosis(current);
+        LOG.info("Reactive limited scale down diagnosed");
         LOG.info(current.toString());
         return currentDiagnosis;
       }
+    } else {
+      Diagnosis<ComponentBottleneck> bufferRateDiagnosis =
+              detectorService.run(bufferRateDetector, topology);
+      Set<ComponentBottleneck> bufferRateSummary = bufferRateDiagnosis.getSummary();
+      if (bufferRateSummary.size() == 0) {
+        return null;
+      }
+
+      Diagnosis<ComponentBottleneck> executeCountDiagnosis =
+              detectorService.run(executeCountDetector, topology);
+      Set<ComponentBottleneck> executeCountSummary = executeCountDiagnosis.getSummary();
+
+      BottleneckUtils.merge(bufferRateSummary, executeCountSummary);
+      Diagnosis<ComponentBottleneck> currentDiagnosis = new Diagnosis<>();
+      for (ComponentBottleneck componentBottleneck : bufferRateSummary) {
+        currentDiagnosis.addToDiagnosis(componentBottleneck);
+      }
+      LOG.info("Proactive limited scale down diagnosed");
+      return currentDiagnosis;
     }
     return null;
   }

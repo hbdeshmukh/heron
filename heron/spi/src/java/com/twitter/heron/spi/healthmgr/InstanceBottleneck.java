@@ -48,7 +48,10 @@ public class InstanceBottleneck extends Bottleneck {
     return false;
   }
 
-  public String getDataPoint(String metric) {
-    return instanceData.getMetricValue(metric);
+  public String getDataPoint(String metric) { return instanceData.getMetricValue(metric);
   }
+
+  public boolean hasMetric(String metric) { return instanceData.hasMetric(metric); }
+
+  public boolean hasMetricStartsWith(String metricPrefix) { return instanceData.hasMetricStartsWith(metricPrefix); }
 }

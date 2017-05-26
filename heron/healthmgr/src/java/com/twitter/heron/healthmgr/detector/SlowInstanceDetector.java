@@ -28,6 +28,7 @@ public class SlowInstanceDetector implements IDetector<ComponentBottleneck> {
 
   private BackPressureDetector backpressureDetector = new BackPressureDetector();
   private ReportingDetector executeCountDetector = new ReportingDetector(EXECUTION_COUNT_METRIC);
+  private BufferRateDetector bufferRateDetector = new BufferRateDetector();
 
   private DetectorService detectorService;
 
@@ -36,6 +37,7 @@ public class SlowInstanceDetector implements IDetector<ComponentBottleneck> {
     this.runtime = inputRuntime;
     this.backpressureDetector.initialize(config, inputRuntime);
     this.executeCountDetector.initialize(config, inputRuntime);
+    this.bufferRateDetector.initialize(config, inputRuntime);
     detectorService = (DetectorService) Runtime
         .getDetectorService(runtime);
   }
@@ -43,7 +45,7 @@ public class SlowInstanceDetector implements IDetector<ComponentBottleneck> {
   @Override
   public Diagnosis<ComponentBottleneck> detect(TopologyAPI.Topology topology) {
     return DataSkewDetector
-        .commonDiagnosis(runtime, topology, backpressureDetector, executeCountDetector, -1);
+        .commonDiagnosis(runtime, topology, backpressureDetector, executeCountDetector, bufferRateDetector, -1);
   }
 
   @Override

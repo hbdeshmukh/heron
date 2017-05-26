@@ -40,6 +40,7 @@ healthmgr_deps_files = [
     "@org_glassfish_hk2_hk2_locator//jar",
     "@org_yaml_snakeyaml//jar",
     "@com_google_guava_guava//jar",
+    "@org_apache_commons_commons_math3//jar"
 ]
 
 java_library(

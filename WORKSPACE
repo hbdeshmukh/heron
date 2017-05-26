@@ -401,3 +401,8 @@ maven_jar(
   name = "com_101tec_zkclient",
   artifact = "com.101tec:zkclient:0.3"
 )
+
+maven_jar(
+  name = "org_apache_commons_commons_math3",
+  artifact = "org.apache.commons:commons-math3:3.6.1"
+)
