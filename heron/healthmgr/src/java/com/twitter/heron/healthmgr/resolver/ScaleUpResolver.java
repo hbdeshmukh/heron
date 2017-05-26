@@ -60,6 +60,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   private int newParallelism;
   // Time in seconds.
   private Double timeToDrainPendingBuffer = Double.MAX_VALUE;
+  private double threholdForAdditionalCapacity = 0.05;
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
@@ -179,18 +180,19 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       if (Double.compare(totalGrowthRatePerSecond, 0.0) > 0) {
         // We should scale up.
         final Double additionalCapacity = (totalGrowthRatePerSecond + totalPendingBufferSize/timeToDrainPendingBuffer);
-        boolean needToScaleUp = (additionalCapacity/totalExecutionRate) > 0.05;
+        boolean needToScaleUp = Double.compare(additionalCapacity/totalExecutionRate, threholdForAdditionalCapacity) > 0;
         if (needToScaleUp) {
           // scale up fencing: do not scale more than 4 times the current size
           final double scaleUpMultiplier = Math
-                  .min((additionalCapacity/totalExecutionRate + 1), 4.0);
-          return (int) Math.ceil(scaleUpMultiplier * current.getInstances().size());
+                  .min(((additionalCapacity/totalExecutionRate) + 1), 4.0);
+          return (int) Math.ceil(scaleUpMultiplier) * current.getInstances().size();
         } else {
-          return 0;
+          // Retain the current number of intsances.
+          return current.getInstances().size();
         }
       } else {
         // No need to scale up.
-        return 0;
+        return return current.getInstances().size();;
       }
     }
   }
