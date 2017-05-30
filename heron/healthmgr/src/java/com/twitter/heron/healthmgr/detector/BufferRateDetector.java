@@ -35,34 +35,27 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
 
   private static final Logger LOG = Logger.getLogger(BufferRateDetector.class.getName());
   private static final String AVG_PENDING_PACKETS = "__connection_buffer_by_intanceid";
+  private static final String AVG_PENDING_BYTES = "__connection_buffer_by_intanceid";
   private static final String BUFFER_GROWTH_RATE = "__buffer_growth_rate";
   private static final String LATEST_BUFFER_SIZE_BYTES = "__latest_buffer_size_bytes";
+  private static final String LATEST_BUFFER_SIZE_PACKETS = "__latest_buffer_size_packets";
   private SinkVisitor visitor;
   private Config runtime;
 
   // TODO(harshad) - Psas the parameter below via config.
   private long singleObservationLength = 600; // The duration of each observation interval in seconds.
   private long numSecondsBetweenObservations = 60;
-  // TODO(harshad) - Psas the parameter below via config.
-  private double bufferIncreaseRateThreshold = 2.0;
   // TODO(harshad) - Verify if metricstimeline API accepts starttime and endtime values in seconds.
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
     this.runtime = inputRuntime;
-    LOG.info("Initializing ...");
-    // System.out.println(runtime.toString());
     this.visitor = Runtime.metricsReader(runtime);
   }
 
   @Override
   public Diagnosis<ComponentBottleneck> detect(TopologyAPI.Topology topology)
           throws RuntimeException {
-    LOG.info("detect");
-    if (runtime == null) {
-      LOG.info("Runtime is null");
-    }
-    LOG.info(runtime.toString());
     PackingPlan packingPlan = getPackingPlan(topology, runtime);
     long endTime = System.currentTimeMillis() / 1000;
 
@@ -100,11 +93,12 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
     CurveFitter curveFitter = new CurveFitter();
     List<Double> xPoints = new ArrayList<>();
     for (int i = 0; i < data.size(); i++) {
-      xPoints.add(new Double(i * numSecondsBetweenObservations));
+      if (!Double.valueOf(i * numSecondsBetweenObservations).isNaN()) {
+        xPoints.add(new Double(i * numSecondsBetweenObservations));
+      }
     }
     curveFitter.linearCurveFit(xPoints, data);
-    System.out.println(data);
-    System.out.println(curveFitter);
+    LOG.info(curveFitter.toString());
     return curveFitter.getSlope();
   }
 
@@ -139,7 +133,7 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
         currInstanceMetricsInfo
                 .add(new MetricsInfo(BUFFER_GROWTH_RATE, bufferedPacketsIncreaseRate.toString()));
         // Get the latest size of the buffer.
-        currInstanceMetricsInfo.add(new MetricsInfo(LATEST_BUFFER_SIZE_BYTES, instanceMetrics.get(instanceMetrics.size() - 1).toString()));
+        currInstanceMetricsInfo.add(new MetricsInfo(LATEST_BUFFER_SIZE_PACKETS, instanceMetrics.get(instanceMetrics.size() - 1).toString()));
         currComponentBottleneck
                 .add(currInstanceContainerId, new PackingPlan.InstancePlan(new InstanceId(currComponentName, currInstanceId, 0), null),
                         currInstanceMetricsInfo);

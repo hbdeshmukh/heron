@@ -48,9 +48,9 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
   private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
-  private static final String AVG_PENDING_PACKETS_METRIC = "__connection_buffer_by_intanceid";
   private static final String BUFFER_GROWTH_RATE = "__buffer_growth_rate";
   private static final String LATEST_BUFFER_SIZE_BYTES = "__latest_buffer_size_bytes";
+  private static final String LATEST_BUFFER_SIZE_PACKETS = "__latest_buffer_size_packets";
   private static final Logger LOG = Logger.getLogger(ScaleUpResolver.class.getName());
 
 
@@ -58,9 +58,9 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   private Config runtime;
   private ISchedulerClient schedulerClient;
   private int newParallelism;
-  // Time in seconds.
+  // Time (in seconds).
   private Double timeToDrainPendingBuffer = Double.MAX_VALUE;
-  private double threholdForAdditionalCapacity = 0.05;
+  private double threholdForAdditionalCapacity = 0.01;
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
@@ -95,7 +95,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
             .setProposedPackingPlan(proposedPlan)
             .build();
 
-    LOG.info("Sending Updating topology request: " + updateTopologyRequest);
+    // LOG.info("Sending Updating topology request: " + updateTopologyRequest);
     if (!schedulerClient.updateTopology(updateTopologyRequest)) {
       LOG.log(Level.SEVERE, "Failed to update topology with Scheduler, updateTopologyRequest="
           + updateTopologyRequest);
@@ -164,35 +164,61 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       Double totalPendingBufferSize = 0.0;
       for (InstanceBottleneck instanceData : current.getInstances()) {
         if (instanceData.hasMetric(BUFFER_GROWTH_RATE)) {
-          totalGrowthRatePerSecond += Double.valueOf(instanceData.getInstanceData().getMetricValue(AVG_PENDING_PACKETS_METRIC));
+          if (!Double.valueOf(instanceData.getInstanceData().getMetricValue(BUFFER_GROWTH_RATE)).isNaN()) {
+            totalGrowthRatePerSecond += Double.valueOf(instanceData.getInstanceData().getMetricValue(BUFFER_GROWTH_RATE));
+          }
         }
         if (instanceData.hasMetric(EXECUTION_COUNT_METRIC)) {
-          totalExecutionCount += Double.valueOf(instanceData.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC));
+          if (!Double.valueOf(instanceData.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC)).isNaN()) {
+            totalExecutionCount += Double.valueOf(instanceData.getInstanceData().getMetricValue(EXECUTION_COUNT_METRIC));
+          }
         }
-        if (instanceData.hasMetric(LATEST_BUFFER_SIZE_BYTES)) {
-          totalPendingBufferSize += Double.valueOf(instanceData.getInstanceData().getMetricValue(LATEST_BUFFER_SIZE_BYTES));
+        if (instanceData.hasMetric(LATEST_BUFFER_SIZE_PACKETS)) {
+          if (!Double.valueOf(instanceData.getInstanceData().getMetricValue(LATEST_BUFFER_SIZE_PACKETS)).isNaN()) {
+            totalPendingBufferSize += Double.valueOf(instanceData.getInstanceData().getMetricValue(LATEST_BUFFER_SIZE_PACKETS));
+          }
         }
       }
 
-      final double totalExecutionRate = totalExecutionCount / TrackerVisitor.INTERVAL;
+      final double totalExecutionRate = totalExecutionCount;
+
+      assert !totalGrowthRatePerSecond.isNaN();
+      assert !totalExecutionCount.isNaN();
+      assert !totalPendingBufferSize.isNaN();
+
+      LOG.info("Total growth rate: " + totalGrowthRatePerSecond);
+      LOG.info("Total execution rate per sec: " + totalExecutionCount);
+      LOG.info("Total pending buffer size: " + totalPendingBufferSize);
 
       // TODO(harshad) - In the for loop above, get the total buffer size.
       if (Double.compare(totalGrowthRatePerSecond, 0.0) > 0) {
-        // We should scale up.
-        final Double additionalCapacity = (totalGrowthRatePerSecond + totalPendingBufferSize/timeToDrainPendingBuffer);
-        boolean needToScaleUp = Double.compare(additionalCapacity/totalExecutionRate, threholdForAdditionalCapacity) > 0;
+        final Double additionalCapacity = totalGrowthRatePerSecond + totalPendingBufferSize/timeToDrainPendingBuffer;
+        boolean needToScaleUp = false;
+        if (Double.compare(totalExecutionRate, 0.0) > 0) {
+          needToScaleUp = Double.compare(additionalCapacity / totalExecutionRate, threholdForAdditionalCapacity) > 0;
+        }
+        LOG.info("Requested additional capacity factor: " + additionalCapacity);
         if (needToScaleUp) {
           // scale up fencing: do not scale more than 4 times the current size
+          LOG.info("Scale up multiplier = " + (1 + additionalCapacity/totalExecutionRate));
           final double scaleUpMultiplier = Math
                   .min(((additionalCapacity/totalExecutionRate) + 1), 4.0);
+          LOG.info("Scale up multiplier (capped): " + scaleUpMultiplier);
+          LOG.info("Returning " + (int) Math.ceil(scaleUpMultiplier) * current.getInstances().size() + " to scale up");
           return (int) Math.ceil(scaleUpMultiplier) * current.getInstances().size();
         } else {
           // Retain the current number of intsances.
+          String printValue = Double.toString((Double.compare(totalExecutionRate, 0.0) > 0)
+                  ? additionalCapacity / totalExecutionRate
+                  : 0.0);
+          LOG.info("No need to scale up - observed value: " + printValue
+                    + " threshold for adding capacity: " + threholdForAdditionalCapacity);
           return current.getInstances().size();
         }
       } else {
+        LOG.info("Not scaling up - total growth rate = " + totalGrowthRatePerSecond);
         // No need to scale up.
-        return return current.getInstances().size();;
+        return current.getInstances().size();
       }
     }
   }
@@ -211,12 +237,12 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       return true;
     }
     if (SLAManagerUtils.reducedBackPressure(oldComponent, newComponent)) {
-      System.out.println("reduced backpressure");
+      LOG.info("reduced backpressure");
       return true;
     }
     if (SLAManagerUtils.improvedMetricSum(oldComponent, newComponent,
         EXECUTION_COUNT_METRIC, improvement)) {
-      System.out.println("third");
+      LOG.info("third");
       return true;
     }
 

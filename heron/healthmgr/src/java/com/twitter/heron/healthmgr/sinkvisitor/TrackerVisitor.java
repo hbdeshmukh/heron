@@ -87,13 +87,23 @@ public class TrackerVisitor implements SinkVisitor {
               .queryParam("component", component[j])
               .queryParam("starttime", startTime)
               .queryParam("endtime", endTime);
-      System.out.println(target.toString());
+      LOG.info(target.toString());
       Response r = target.request(MediaType.APPLICATION_JSON_TYPE).get();
       String responseAsJson = r.readEntity(String.class);
       // NOTE(harshad) - The string parsing of the Json response reorders the metrics somehow.
       ObjectMapper objectMapper = new ObjectMapper();
       try {
         JsonNode rootNode = objectMapper.readTree(responseAsJson);
+        boolean parseCondition = false;
+        if (rootNode.has("result")) {
+          if (rootNode.get("result").has("timeline")) {
+            parseCondition = rootNode.get("result").get("timeline").has(metric);
+          }
+        }
+        if (!parseCondition) {
+          LOG.info("The response doesn't have the necessary fields");
+          return metricsInfo;
+        }
         JsonNode metricNode = rootNode.get("result").get("timeline").get(metric);
         Iterator<String> iter = metricNode.fieldNames();
         while (iter.hasNext()) {

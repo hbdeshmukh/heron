@@ -36,6 +36,7 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
   private static final Logger LOG = Logger.getLogger(DataSkewDetector.class.getName());
 
   public static final String AVG_PENDING_PACKETS = "__connection_buffer_by_intanceid";
+  public static final String AVG_PENDING_BYTES = "__connection_buffer_by_intanceid";
   private static final String BACKPRESSURE_METRIC = "__time_spent_back_pressure_by_compid";
   private static final String EXECUTION_COUNT_METRIC = "__execute-count/default";
 
@@ -100,6 +101,7 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
     Diagnosis<ComponentBottleneck> backPressuredDiagnosis =
         detectorService.run(backpressureDetector, topology);
     Set<ComponentBottleneck> backPressureSummary = backPressuredDiagnosis.getSummary();
+    LOG.info("Backpressure summary size: " + backPressureSummary.size());
     if (backPressureSummary.size() > 0) {
       Diagnosis<ComponentBottleneck> executeCountDiagnosis =
               detectorService.run(executeCountDetector, topology);
@@ -122,6 +124,7 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
         return currentDiagnosis;
       }
     } else {
+      LOG.info(" ************************ No backpressure found **************");
       Diagnosis<ComponentBottleneck> bufferRateDiagnosis =
               detectorService.run(bufferRateDetector, topology);
       Set<ComponentBottleneck> bufferRateSummary = bufferRateDiagnosis.getSummary();

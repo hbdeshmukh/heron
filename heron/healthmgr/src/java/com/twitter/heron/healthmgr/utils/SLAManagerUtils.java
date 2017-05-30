@@ -170,7 +170,6 @@ public final class SLAManagerUtils {
     String name = "container_" + containerPlan.getId()
         + "_" + instancePlan.getComponentName()
         + "_" + instancePlan.getTaskId();
-    //System.out.println(BACKPRESSURE_METRIC +"/" + name);
     String newMetricName;
     if(metricExtension.equals("")){
       newMetricName = metricName + "/" + name;
