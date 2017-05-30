@@ -42,14 +42,20 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
   private SinkVisitor visitor;
   private Config runtime;
 
-  // TODO(harshad) - Psas the parameter below via config.
-  private long singleObservationLength = 600; // The duration of each observation interval in seconds.
+  // TODO(harshad) - Pass the parameter below via config.
+  private long singleObservationLength; // The duration of each observation interval in seconds.
   private long numSecondsBetweenObservations = 60;
   // TODO(harshad) - Verify if metricstimeline API accepts starttime and endtime values in seconds.
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
     this.runtime = inputRuntime;
+    try {
+      String valueString = inputConfig.getStringValue("health.policy.observation.duration.sec");
+      this.singleObservationLength = Long.parseLong(valueString);
+    } catch (Exception e) {
+      this.singleObservationLength = 600; // Default value.
+    }
     this.visitor = Runtime.metricsReader(runtime);
   }
 

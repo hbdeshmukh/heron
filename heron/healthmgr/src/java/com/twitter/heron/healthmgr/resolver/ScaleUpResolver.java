@@ -22,12 +22,9 @@ import java.util.logging.Logger;
 
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.common.basics.SysUtils;
-import com.twitter.heron.common.config.SystemConfig;
-import com.twitter.heron.healthmgr.sinkvisitor.TrackerVisitor;
 import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.scheduler.Scheduler;
 import com.twitter.heron.proto.system.PackingPlans;
-import com.twitter.heron.proto.system.PhysicalPlans;
 import com.twitter.heron.scheduler.client.ISchedulerClient;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
@@ -36,7 +33,6 @@ import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
 import com.twitter.heron.spi.healthmgr.Diagnosis;
 import com.twitter.heron.spi.healthmgr.IResolver;
 import com.twitter.heron.spi.healthmgr.InstanceBottleneck;
-import com.twitter.heron.spi.healthmgr.utils.BottleneckUtils;
 import com.twitter.heron.spi.packing.IRepacking;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
@@ -60,12 +56,18 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   private int newParallelism;
   // Time (in seconds).
   private Double timeToDrainPendingBuffer = Double.MAX_VALUE;
-  private double threholdForAdditionalCapacity = 0.01;
+  private double thresholdForAdditionalCapacity;
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
     this.config = inputConfig;
     this.runtime = inputRuntime;
+    try {
+      String valueString = inputConfig.getStringValue("health.policy.addcapacity.threshold");
+      this.thresholdForAdditionalCapacity = Double.parseDouble(valueString);
+    } catch (Exception e) {
+      this.thresholdForAdditionalCapacity = 0.02; // Default value.
+    }
     schedulerClient = (ISchedulerClient) Runtime.schedulerClientInstance(runtime);
   }
 
@@ -103,7 +105,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     }
 
     try {
-      TimeUnit.MINUTES.sleep(6);
+      TimeUnit.MINUTES.sleep(1);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
@@ -195,7 +197,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
         final Double additionalCapacity = totalGrowthRatePerSecond + totalPendingBufferSize/timeToDrainPendingBuffer;
         boolean needToScaleUp = false;
         if (Double.compare(totalExecutionRate, 0.0) > 0) {
-          needToScaleUp = Double.compare(additionalCapacity / totalExecutionRate, threholdForAdditionalCapacity) > 0;
+          needToScaleUp = Double.compare(additionalCapacity / totalExecutionRate, thresholdForAdditionalCapacity) > 0;
         }
         LOG.info("Requested additional capacity factor: " + additionalCapacity);
         if (needToScaleUp) {
@@ -212,7 +214,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
                   ? additionalCapacity / totalExecutionRate
                   : 0.0);
           LOG.info("No need to scale up - observed value: " + printValue
-                    + " threshold for adding capacity: " + threholdForAdditionalCapacity);
+                    + " threshold for adding capacity: " + thresholdForAdditionalCapacity);
           return current.getInstances().size();
         }
       } else {
