@@ -16,6 +16,7 @@ package com.twitter.heron.healthmgr.utils;
 
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
+import java.text.DecimalFormat;
 import java.util.List;
 
 public class CurveFitter {
@@ -52,7 +53,11 @@ public class CurveFitter {
 
   @Override
   public String toString() {
-    return "Slope = " + slope + " Intercept = " + intercept + " mean squared error = " + meanSquaredError;
+    if (slope > 0.0 && intercept > 0.0) {
+      DecimalFormat format = new DecimalFormat("#.###");
+      return "Slope = " + format.format(slope) + " Intercept = " + format.format(intercept) + " mean squared error = " + format.format(meanSquaredError);
+    }
+    return "0 slope and intercept";
   }
 
   /**

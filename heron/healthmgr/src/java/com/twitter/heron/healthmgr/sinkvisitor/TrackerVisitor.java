@@ -87,7 +87,7 @@ public class TrackerVisitor implements SinkVisitor {
               .queryParam("component", component[j])
               .queryParam("starttime", startTime)
               .queryParam("endtime", endTime);
-      LOG.info(target.toString());
+      //LOG.info(target.toString());
       Response r = target.request(MediaType.APPLICATION_JSON_TYPE).get();
       String responseAsJson = r.readEntity(String.class);
       // NOTE(harshad) - The string parsing of the Json response reorders the metrics somehow.

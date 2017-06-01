@@ -13,9 +13,8 @@
 // limitations under the License.
 package com.twitter.heron.healthmgr.resolver;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.text.DecimalFormat;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,7 +52,9 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   private Config config;
   private Config runtime;
   private ISchedulerClient schedulerClient;
-  private int newParallelism;
+  /*private int newParallelism;
+  private String newScaledUpComponent;*/
+  private HashMap<String, Integer> scaleUpDemands = new HashMap<>();
   // Time (in seconds).
   private Double timeToDrainPendingBuffer = Double.MAX_VALUE;
   private double thresholdForAdditionalCapacity;
@@ -73,19 +74,12 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
   @Override
   public Boolean resolve(Diagnosis<ComponentBottleneck> diagnosis, TopologyAPI.Topology topology) {
-    ComponentBottleneck bottleneck = diagnosis.getSummary().iterator().next();
-    String componentName = bottleneck.getComponentName();
-
     String topologyName = topology.getName();
-    LOG.fine(String.format("updateTopologyHandler called for %s with %s",
-        topologyName, newParallelism));
 
     SchedulerStateManagerAdaptor manager = Runtime.schedulerStateManagerAdaptor(runtime);
-    Map<String, Integer> changeRequests = new HashMap<>();
-    changeRequests.put(componentName, this.newParallelism);
     PackingPlans.PackingPlan currentPlan = manager.getPackingPlan(topologyName);
 
-    PackingPlans.PackingPlan proposedPlan = buildNewPackingPlan(currentPlan, changeRequests,
+    PackingPlans.PackingPlan proposedPlan = buildNewPackingPlan(currentPlan, scaleUpDemands,
         topology);
     if (proposedPlan == null) {
       return false;
@@ -97,7 +91,6 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
             .setProposedPackingPlan(proposedPlan)
             .build();
 
-    // LOG.info("Sending Updating topology request: " + updateTopologyRequest);
     if (!schedulerClient.updateTopology(updateTopologyRequest)) {
       LOG.log(Level.SEVERE, "Failed to update topology with Scheduler, updateTopologyRequest="
           + updateTopologyRequest);
@@ -122,14 +115,12 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     if (diagnosis.getSummary() == null) {
       throw new RuntimeException("Not valid diagnosis object");
     }
-
-    ComponentBottleneck current = diagnosis.getSummary().iterator().next();
-    this.newParallelism = computeScaleUpFactor(current);
-
-    if (this.newParallelism == 0) {
-      throw new RuntimeException("New parallelism after scale up is 0");
+    for (ComponentBottleneck cb : diagnosis.getSummary()) {
+      scaleUpDemands.put(cb.getComponentName(), computeScaleUpFactor(cb));
     }
-    return this.newParallelism;
+
+    // NOTE - The output value is immaterial when action log is disabled.
+    return 1;
   }
 
   private int computeScaleUpFactor(ComponentBottleneck current) {
@@ -188,9 +179,10 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       assert !totalExecutionCount.isNaN();
       assert !totalPendingBufferSize.isNaN();
 
-      LOG.info("Total growth rate: " + totalGrowthRatePerSecond);
-      LOG.info("Total execution rate per sec: " + totalExecutionCount);
-      LOG.info("Total pending buffer size: " + totalPendingBufferSize);
+      DecimalFormat format = new DecimalFormat("#.###");
+      LOG.info("GROWTH: " + format.format(totalGrowthRatePerSecond) + " packets/sec" +
+      " EXECUTION: " + format.format(totalExecutionCount)+ " packets/sec" +
+      " PENDING: " + format.format(totalPendingBufferSize) + " packets");
 
       // TODO(harshad) - In the for loop above, get the total buffer size.
       if (Double.compare(totalGrowthRatePerSecond, 0.0) > 0) {
@@ -199,18 +191,21 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
         if (Double.compare(totalExecutionRate, 0.0) > 0) {
           needToScaleUp = Double.compare(additionalCapacity / totalExecutionRate, thresholdForAdditionalCapacity) > 0;
         }
-        LOG.info("Requested additional capacity factor: " + additionalCapacity);
+        LOG.info("Requested additional capacity factor: " + format.format(additionalCapacity));
         if (needToScaleUp) {
           // scale up fencing: do not scale more than 4 times the current size
           LOG.info("Scale up multiplier = " + (1 + additionalCapacity/totalExecutionRate));
           final double scaleUpMultiplier = Math
                   .min(((additionalCapacity/totalExecutionRate) + 1), 4.0);
-          LOG.info("Scale up multiplier (capped): " + scaleUpMultiplier);
-          LOG.info("Returning " + (int) Math.ceil(scaleUpMultiplier) * current.getInstances().size() + " to scale up");
-          return (int) Math.ceil(scaleUpMultiplier) * current.getInstances().size();
+          LOG.info("Scale up multiplier (capped): " + format.format(scaleUpMultiplier));
+          final int returnValue
+                  = Math.min((int) Math.ceil(scaleUpMultiplier) * current.getInstances().size(),
+                  (int) Math.ceil(scaleUpMultiplier * current.getInstances().size()));
+          LOG.info("Returning " + returnValue + " to scale up");
+          return returnValue;
         } else {
           // Retain the current number of intsances.
-          String printValue = Double.toString((Double.compare(totalExecutionRate, 0.0) > 0)
+          String printValue = format.format((Double.compare(totalExecutionRate, 0.0) > 0)
                   ? additionalCapacity / totalExecutionRate
                   : 0.0);
           LOG.info("No need to scale up - observed value: " + printValue
@@ -218,7 +213,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
           return current.getInstances().size();
         }
       } else {
-        LOG.info("Not scaling up - total growth rate = " + totalGrowthRatePerSecond);
+        LOG.info("Not scaling up - total growth rate = " + format.format(totalGrowthRatePerSecond));
         // No need to scale up.
         return current.getInstances().size();
       }
@@ -262,14 +257,39 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     PackingPlanProtoSerializer serializer = new PackingPlanProtoSerializer();
     PackingPlan currentPackingPlan = deserializer.fromProto(currentProtoPlan);
 
+    List<String> candidateComponents = new ArrayList<>();
+
     Map<String, Integer> componentCounts = currentPackingPlan.getComponentCounts();
-    int currentCount = componentCounts.get(changeRequests.keySet().iterator().next());
-    if (currentCount == newParallelism) {
-      LOG.info("New parallelism is same as current: " + changeRequests);
-      return null;
+    for (String currComponent : changeRequests.keySet()) {
+      int currentCount = componentCounts.get(currComponent);
+      if (currentCount == changeRequests.get(currComponent)) {
+        LOG.info("Desired parallelism of " + currComponent + " is same as current: " + changeRequests.get(currComponent));
+      } else {
+        candidateComponents.add(currComponent);
+      }
     }
 
-    Map<String, Integer> componentChanges = parallelismDelta(componentCounts, changeRequests);
+    // Use the list below to store the component to be changed.
+    List<String> changedComponent = new ArrayList<>();
+    if (candidateComponents.isEmpty()) {
+      LOG.info("No component requires change - not building new packing plan");
+      return null;
+    } else {
+      // Find the component with the highest demand.
+      int maxDemand = Integer.MIN_VALUE;
+      for (String currComponent : candidateComponents) {
+        if (changeRequests.get(currComponent) > maxDemand) {
+          maxDemand = changeRequests.get(currComponent);
+          changedComponent.clear();
+          changedComponent.add(currComponent);
+        }
+      }
+    }
+
+    assert changedComponent.size() == 1;
+
+    Map<String, Integer> componentChanges =
+            parallelismDeltaSingleComponent(componentCounts, changeRequests, changedComponent.iterator().next());
 
     // Create an instance of the packing class
     String repackingClass = Context.repackingClass(config);
@@ -306,4 +326,21 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     }
     return componentDeltas;
   }
+
+  Map<String, Integer> parallelismDeltaSingleComponent(Map<String, Integer> componentCounts,
+                                                       Map<String, Integer> changeRequests,
+                                                       String componentName) {
+    Map<String, Integer> componentDeltas = new HashMap<>();
+    if (!componentCounts.containsKey(componentName)) {
+      throw new IllegalArgumentException(
+              "Invalid component name in update request: " + componentName);
+    }
+    Integer newValue = changeRequests.get(componentName);
+    Integer delta = newValue - componentCounts.get(componentName);
+    if (delta != 0) {
+      componentDeltas.put(componentName, delta);
+    }
+    return componentDeltas;
+  }
 }
+

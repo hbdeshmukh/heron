@@ -95,7 +95,7 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
     return false;
   }
 
-  private Double getIncreaseRate(List<Double> data) {
+  private Double getIncreaseRate(String componentName, List<Double> data) {
     CurveFitter curveFitter = new CurveFitter();
     List<Double> xPoints = new ArrayList<>();
     for (int i = 0; i < data.size(); i++) {
@@ -104,7 +104,7 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
       }
     }
     curveFitter.linearCurveFit(xPoints, data);
-    LOG.info(curveFitter.toString());
+    LOG.info(componentName + " " + curveFitter.toString());
     return curveFitter.getSlope();
   }
 
@@ -133,7 +133,7 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
           instanceMetrics.add(currComponentInstances.get(bottleneckID).getDataPoints(AVG_PENDING_PACKETS)[instanceID]);
         }
         // Now get the rate of increase in buffered packets for this instance.
-        Double bufferedPacketsIncreaseRate = getIncreaseRate(instanceMetrics);
+        Double bufferedPacketsIncreaseRate = getIncreaseRate(currComponentName, instanceMetrics);
 
         Set<MetricsInfo> currInstanceMetricsInfo = new HashSet<>();
         currInstanceMetricsInfo

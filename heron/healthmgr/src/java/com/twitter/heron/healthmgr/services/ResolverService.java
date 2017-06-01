@@ -50,8 +50,7 @@ public class ResolverService {
   public <T extends Bottleneck> boolean run(IResolver<T> resolver, TopologyAPI.Topology topology,
                                             String problem, Diagnosis<T> diagnosis,
                                             double outcome) {
-
-    log.addAction(topology.getName(), problem, diagnosis, outcome);
+    //log.addAction(topology.getName(), problem, diagnosis, outcome);
     return resolver.resolve(diagnosis, topology);
   }
 

@@ -125,7 +125,16 @@ public final class SLAManagerUtils {
               Set<MetricsInfo> metricsForNewBottleneck = new HashSet<>();
               metricsForNewBottleneck.add(new MetricsInfo(metricName, metricValue.get(metricCounter)));
               // With the set of MetricsInfo just constructed, append a ComponentBottleneck in the hash map's value.
-              results.get(instancePlan.getComponentName()).get(metricCounter).add(containerPlan.getId(), instancePlan, metricsForNewBottleneck);
+              if (results.get(instancePlan.getComponentName()).size() > metricCounter) {
+                results.get(instancePlan.getComponentName()).get(metricCounter).add(containerPlan.getId(), instancePlan, metricsForNewBottleneck);
+              } else {
+                // Append a new list.
+                results.get(instancePlan.getComponentName()).add(new ComponentBottleneck(component));
+                // To the new list, add the ComponentBottleneck.
+                results.get(instancePlan.getComponentName())
+                        .get(results.get(instancePlan.getComponentName()).size() - 1)
+                        .add(containerPlan.getId(), instancePlan, metricsForNewBottleneck);
+              }
             }
           }
         }
