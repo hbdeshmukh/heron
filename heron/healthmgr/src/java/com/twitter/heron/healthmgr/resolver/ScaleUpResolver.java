@@ -67,7 +67,8 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       String valueString = inputConfig.getStringValue("health.policy.addcapacity.threshold");
       this.thresholdForAdditionalCapacity = Double.parseDouble(valueString);
     } catch (Exception e) {
-      this.thresholdForAdditionalCapacity = 0.02; // Default value.
+      e.printStackTrace();
+      this.thresholdForAdditionalCapacity = 0.00; // Default value.
     }
     schedulerClient = (ISchedulerClient) Runtime.schedulerClientInstance(runtime);
   }
@@ -180,44 +181,37 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       assert !totalPendingBufferSize.isNaN();
 
       DecimalFormat format = new DecimalFormat("#.###");
-      LOG.info("GROWTH: " + format.format(totalGrowthRatePerSecond) + " packets/sec" +
-      " EXECUTION: " + format.format(totalExecutionCount)+ " packets/sec" +
-      " PENDING: " + format.format(totalPendingBufferSize) + " packets");
 
-      // TODO(harshad) - In the for loop above, get the total buffer size.
-      if (Double.compare(totalGrowthRatePerSecond, 0.0) > 0) {
+      final boolean scaleUpNeeded = checkIfScaleUpIsNeeded(totalGrowthRatePerSecond, totalExecutionRate);
+
+      if (scaleUpNeeded) {
         final Double additionalCapacity = totalGrowthRatePerSecond + totalPendingBufferSize/timeToDrainPendingBuffer;
-        boolean needToScaleUp = false;
-        if (Double.compare(totalExecutionRate, 0.0) > 0) {
-          needToScaleUp = Double.compare(additionalCapacity / totalExecutionRate, thresholdForAdditionalCapacity) > 0;
-        }
-        LOG.info("Requested additional capacity factor: " + format.format(additionalCapacity));
-        if (needToScaleUp) {
-          // scale up fencing: do not scale more than 4 times the current size
-          LOG.info("Scale up multiplier = " + (1 + additionalCapacity/totalExecutionRate));
-          final double scaleUpMultiplier = Math
-                  .min(((additionalCapacity/totalExecutionRate) + 1), 4.0);
-          LOG.info("Scale up multiplier (capped): " + format.format(scaleUpMultiplier));
-          final int returnValue
-                  = Math.min((int) Math.ceil(scaleUpMultiplier) * current.getInstances().size(),
-                  (int) Math.ceil(scaleUpMultiplier * current.getInstances().size()));
-          LOG.info("Returning " + returnValue + " to scale up");
-          return returnValue;
-        } else {
-          // Retain the current number of intsances.
-          String printValue = format.format((Double.compare(totalExecutionRate, 0.0) > 0)
-                  ? additionalCapacity / totalExecutionRate
-                  : 0.0);
-          LOG.info("No need to scale up - observed value: " + printValue
-                    + " threshold for adding capacity: " + thresholdForAdditionalCapacity);
-          return current.getInstances().size();
-        }
+        LOG.info("GROWTH: " + format.format(totalGrowthRatePerSecond) + " packets/sec" +
+                " EXECUTION: " + format.format(totalExecutionCount)+ " packets/sec" +
+                " PENDING: " + format.format(totalPendingBufferSize) + " packets");
+        // scale up fencing: do not scale more than 4 times the current size
+        final double scaleUpMultiplier = Math
+                .min(((additionalCapacity/totalExecutionRate) + 1), 4.0);
+        LOG.info("Scale up multiplier (capped): " + format.format(scaleUpMultiplier));
+        final int returnValue
+                = Math.min((int) Math.ceil(scaleUpMultiplier) * current.getInstances().size(),
+                (int) Math.ceil(scaleUpMultiplier * current.getInstances().size()));
+        LOG.info("Request to increase " + current.getComponentName() + " instances to " + returnValue);
+        return returnValue;
       } else {
-        LOG.info("Not scaling up - total growth rate = " + format.format(totalGrowthRatePerSecond));
-        // No need to scale up.
+        // Retain the current number of intsances.
+        LOG.info("No need to scale up - GROWTH: " + format.format(totalGrowthRatePerSecond)
+                + " EXECUTION: " + format.format(totalExecutionRate));
         return current.getInstances().size();
       }
     }
+  }
+
+  private boolean checkIfScaleUpIsNeeded(Double totalGrowthRatePerSecond, Double totalExecutionRate) {
+    // NOTE - The check on totalExecutionRate is needed because it is used
+    // as a denominator in the scale up factor computation.
+    return Double.compare(totalExecutionRate, 0.0) > 0
+            && Double.compare(totalGrowthRatePerSecond, thresholdForAdditionalCapacity) > 0;
   }
 
   @Override
@@ -257,6 +251,9 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     PackingPlanProtoSerializer serializer = new PackingPlanProtoSerializer();
     PackingPlan currentPackingPlan = deserializer.fromProto(currentProtoPlan);
 
+    // We first filter the components based on whether they need scaling up or not.
+    // As there could be multiple components that need scaling up, we first create
+    // a list of candidate components that need to be scaled up.
     List<String> candidateComponents = new ArrayList<>();
 
     Map<String, Integer> componentCounts = currentPackingPlan.getComponentCounts();
@@ -269,6 +266,9 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       }
     }
 
+    // Among the candidate components, we select only one component that can be changed.
+    // The criterion for selection of the component is that the component with the highest relative demand
+    // will be selected for scaling up.
     // Use the list below to store the component to be changed.
     List<String> changedComponent = new ArrayList<>();
     if (candidateComponents.isEmpty()) {
@@ -276,10 +276,12 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       return null;
     } else {
       // Find the component with the highest demand.
-      int maxDemand = Integer.MIN_VALUE;
+      double maxRelativeDemand = 0.0;
       for (String currComponent : candidateComponents) {
-        if (changeRequests.get(currComponent) > maxDemand) {
-          maxDemand = changeRequests.get(currComponent);
+        final double currComponentRelativeDemand =
+                (changeRequests.get(currComponent) - componentCounts.get(currComponent)) / componentCounts.get(currComponent);
+        if (Double.compare(currComponentRelativeDemand, maxRelativeDemand) > 0) {
+          maxRelativeDemand = currComponentRelativeDemand;
           changedComponent.clear();
           changedComponent.add(currComponent);
         }
@@ -291,6 +293,7 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     Map<String, Integer> componentChanges =
             parallelismDeltaSingleComponent(componentCounts, changeRequests, changedComponent.iterator().next());
 
+    LOG.info("Increasing # instances of " + changedComponent.get(0) + " to " + changeRequests.get(changedComponent.get(0)));
     // Create an instance of the packing class
     String repackingClass = Context.repackingClass(config);
     IRepacking packing;
