@@ -53,7 +53,7 @@ public class CurveFitter {
 
   @Override
   public String toString() {
-    if (slope > 0.0 && intercept > 0.0) {
+    if (Double.compare(slope, 0.0) != 0 && Double.compare(intercept, 0.0) != 0) {
       DecimalFormat format = new DecimalFormat("#.###");
       return "Slope = " + format.format(slope) + " Intercept = " + format.format(intercept) + " mean squared error = " + format.format(meanSquaredError);
     }

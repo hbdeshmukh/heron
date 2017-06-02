@@ -13,23 +13,25 @@
 //  limitations under the License
 package com.twitter.heron.healthmgr.detector;
 
-import java.util.*;
-import java.util.logging.Logger;
-
 import com.twitter.heron.api.generated.TopologyAPI;
-import com.twitter.heron.healthmgr.services.DetectorService;
 import com.twitter.heron.healthmgr.utils.CurveFitter;
 import com.twitter.heron.healthmgr.utils.SLAManagerUtils;
 import com.twitter.heron.proto.system.PackingPlans;
 import com.twitter.heron.scheduler.utils.Runtime;
 import com.twitter.heron.spi.common.Config;
-import com.twitter.heron.spi.healthmgr.*;
+import com.twitter.heron.spi.healthmgr.ComponentBottleneck;
+import com.twitter.heron.spi.healthmgr.Diagnosis;
+import com.twitter.heron.spi.healthmgr.IDetector;
+import com.twitter.heron.spi.healthmgr.InstanceInfo;
 import com.twitter.heron.spi.metricsmgr.metrics.MetricsInfo;
 import com.twitter.heron.spi.metricsmgr.sink.SinkVisitor;
 import com.twitter.heron.spi.packing.InstanceId;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.packing.PackingPlanProtoDeserializer;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
+
+import java.util.*;
+import java.util.logging.Logger;
 
 public class BufferRateDetector implements IDetector<ComponentBottleneck> {
 
@@ -104,7 +106,9 @@ public class BufferRateDetector implements IDetector<ComponentBottleneck> {
       }
     }
     curveFitter.linearCurveFit(xPoints, data);
-    LOG.info(componentName + " " + curveFitter.toString());
+    if (Double.compare(curveFitter.getSlope(), 0.0) != 0 && Double.compare(curveFitter.getIntercept(), 0.0) != 0) {
+      LOG.info(componentName + " " + curveFitter.toString());
+    }
     return curveFitter.getSlope();
   }
 

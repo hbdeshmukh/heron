@@ -101,7 +101,6 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
     Diagnosis<ComponentBottleneck> backPressuredDiagnosis =
         detectorService.run(backpressureDetector, topology);
     Set<ComponentBottleneck> backPressureSummary = backPressuredDiagnosis.getSummary();
-    LOG.info("Backpressure summary size: " + backPressureSummary.size());
     if (backPressureSummary.size() > 0) {
       Diagnosis<ComponentBottleneck> executeCountDiagnosis =
               detectorService.run(executeCountDetector, topology);
@@ -141,7 +140,6 @@ public class DataSkewDetector implements IDetector<ComponentBottleneck> {
       for (ComponentBottleneck componentBottleneck : bufferRateSummary) {
         currentDiagnosis.addToDiagnosis(componentBottleneck);
       }
-      LOG.info("Proactive limited scale down diagnosed");
       return currentDiagnosis;
     }
     return null;

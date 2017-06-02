@@ -14,7 +14,11 @@
 package com.twitter.heron.healthmgr.resolver;
 
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -57,18 +61,26 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
   private HashMap<String, Integer> scaleUpDemands = new HashMap<>();
   // Time (in seconds).
   private Double timeToDrainPendingBuffer = Double.MAX_VALUE;
-  private double thresholdForAdditionalCapacity;
+  private double thresholdForGrowthRate;
+  private double thresholdForPendingBuffer;
 
   @Override
   public void initialize(Config inputConfig, Config inputRuntime) {
     this.config = inputConfig;
     this.runtime = inputRuntime;
     try {
-      String valueString = inputConfig.getStringValue("health.policy.addcapacity.threshold");
-      this.thresholdForAdditionalCapacity = Double.parseDouble(valueString);
+      String valueStringForAdditionalCapacity = inputConfig.getStringValue("health.policy.growth.rate.threshold");
+      this.thresholdForGrowthRate = Double.parseDouble(valueStringForAdditionalCapacity);
     } catch (Exception e) {
       e.printStackTrace();
-      this.thresholdForAdditionalCapacity = 0.00; // Default value.
+      this.thresholdForGrowthRate = 0.00; // Default value.
+    }
+    try {
+      String valueStringForPendingBuffer = inputConfig.getStringValue("health.policy.pending.buffer.threshold");
+      this.thresholdForPendingBuffer = Double.parseDouble(valueStringForPendingBuffer);
+    } catch (Exception e) {
+      e.printStackTrace();
+      this.thresholdForPendingBuffer = 100.00; // Default value.
     }
     schedulerClient = (ISchedulerClient) Runtime.schedulerClientInstance(runtime);
   }
@@ -99,7 +111,8 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     }
 
     try {
-      TimeUnit.MINUTES.sleep(1);
+      LOG.info("Sleeping for 3 minutes ...");
+      TimeUnit.MINUTES.sleep(3);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
@@ -140,10 +153,12 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       LOG.log(Level.WARNING, "Invalid total back-pressure-time/sec: " + totalBackpressureTime);
     } else if (totalBackpressureTime < 20) {
       totalBackpressureTime = 0;
-      LOG.log(Level.WARNING, "Ignore noisy back-pressure-time/sec: " + totalBackpressureTime);
+      //LOG.log(Level.WARNING, "Ignore noisy back-pressure-time/sec: " + totalBackpressureTime);
     }
 
-    LOG.info("Total back-pressure: " + totalBackpressureTime);
+    if (Double.compare(totalBackpressureTime, 0.0) > 0) {
+      LOG.info("Total back-pressure: " + totalBackpressureTime);
+    }
 
     if (Double.compare(totalBackpressureTime, 0.0) > 0) {
       double unusedCapacity = (1.0 * totalBackpressureTime) / (1000 - totalBackpressureTime);
@@ -182,7 +197,8 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
 
       DecimalFormat format = new DecimalFormat("#.###");
 
-      final boolean scaleUpNeeded = checkIfScaleUpIsNeeded(totalGrowthRatePerSecond, totalExecutionRate);
+      final boolean scaleUpNeeded =
+              checkIfScaleUpIsNeeded(totalGrowthRatePerSecond, totalExecutionRate, totalPendingBufferSize, current.getInstances().size());
 
       if (scaleUpNeeded) {
         final Double additionalCapacity = totalGrowthRatePerSecond + totalPendingBufferSize/timeToDrainPendingBuffer;
@@ -207,11 +223,12 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
     }
   }
 
-  private boolean checkIfScaleUpIsNeeded(Double totalGrowthRatePerSecond, Double totalExecutionRate) {
+  private boolean checkIfScaleUpIsNeeded(Double totalGrowthRatePerSecond, Double totalExecutionRate, Double totalPendingBufferSize, int numInstances) {
     // NOTE - The check on totalExecutionRate is needed because it is used
     // as a denominator in the scale up factor computation.
-    return Double.compare(totalExecutionRate, 0.0) > 0
-            && Double.compare(totalGrowthRatePerSecond, thresholdForAdditionalCapacity) > 0;
+    return Double.compare(totalPendingBufferSize, numInstances * thresholdForPendingBuffer) > 0
+            && Double.compare(totalExecutionRate, 0.0) > 0
+            && Double.compare(totalGrowthRatePerSecond, thresholdForGrowthRate) > 0;
   }
 
   @Override
@@ -275,11 +292,14 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       LOG.info("No component requires change - not building new packing plan");
       return null;
     } else {
+      DecimalFormat format = new DecimalFormat("#.###");
       // Find the component with the highest demand.
       double maxRelativeDemand = 0.0;
       for (String currComponent : candidateComponents) {
         final double currComponentRelativeDemand =
-                (changeRequests.get(currComponent) - componentCounts.get(currComponent)) / componentCounts.get(currComponent);
+                (changeRequests.get(currComponent) - componentCounts.get(currComponent)) / (double) componentCounts.get(currComponent);
+        LOG.info(currComponent + " new: " + changeRequests.get(currComponent)
+                + " current: " + componentCounts.get(currComponent) + " relative: " + format.format(currComponentRelativeDemand));
         if (Double.compare(currComponentRelativeDemand, maxRelativeDemand) > 0) {
           maxRelativeDemand = currComponentRelativeDemand;
           changedComponent.clear();
@@ -288,7 +308,9 @@ public class ScaleUpResolver implements IResolver<ComponentBottleneck> {
       }
     }
 
-    assert changedComponent.size() == 1;
+    if (changedComponent.isEmpty()) {
+      return null;
+    }
 
     Map<String, Integer> componentChanges =
             parallelismDeltaSingleComponent(componentCounts, changeRequests, changedComponent.iterator().next());
