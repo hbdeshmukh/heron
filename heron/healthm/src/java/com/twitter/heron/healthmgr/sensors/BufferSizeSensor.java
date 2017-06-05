@@ -32,9 +32,9 @@ import com.twitter.heron.healthmgr.common.PackingPlanProvider;
 import com.twitter.heron.healthmgr.common.TopologyProvider;
 
 public class BufferSizeSensor extends BaseSensor {
-  private final MetricsProvider metricsProvider;
-  private final PackingPlanProvider packingPlanProvider;
-  private final TopologyProvider topologyProvider;
+  protected final MetricsProvider metricsProvider;
+  protected final PackingPlanProvider packingPlanProvider;
+  protected final TopologyProvider topologyProvider;
 
   @Inject
   public BufferSizeSensor(PackingPlanProvider packingPlanProvider,
@@ -69,21 +69,19 @@ public class BufferSizeSensor extends BaseSensor {
       for (String boltInstanceName : boltInstanceNames) {
         String metric = BUFFER_SIZE + boltInstanceName + BUFFER_SIZE_SUFFIX;
 
-        Map<String, ComponentMetrics> stmgrResult = metricsProvider.getComponentMetrics(
-            metric,
-            HealthMgrConstants.DEFAULT_METRIC_DURATION,
-            HealthMgrConstants.COMPONENT_STMGR);
+        Map<String, ComponentMetrics> stmgrResult = getInstanceMetrics(metric);
 
         HashMap<String, InstanceMetrics> streamManagerResult =
             stmgrResult.get(HealthMgrConstants.COMPONENT_STMGR).getMetrics();
 
         // since a bolt instance belongs to one stream manager, expect just one metrics
         // manager instance in the result
-        double stmgrInstanceResult =
-            streamManagerResult.values().iterator().next().getMetricValue(metric);
+        Map<Long, Double> metricValues =
+                streamManagerResult.values().iterator().next().getMetricValues(metric);
 
-        InstanceMetrics boltInstanceMetric =
-            new InstanceMetrics(boltInstanceName, BUFFER_SIZE, stmgrInstanceResult);
+        InstanceMetrics boltInstanceMetric = new InstanceMetrics(boltInstanceName);
+
+        boltInstanceMetric.addMetric(BUFFER_SIZE, metricValues);
 
         instanceMetrics.put(boltInstanceName, boltInstanceMetric);
       }
@@ -93,5 +91,12 @@ public class BufferSizeSensor extends BaseSensor {
     }
 
     return result;
+  }
+
+  protected Map<String, ComponentMetrics> getInstanceMetrics(String metric) {
+    return metricsProvider.getComponentMetrics(
+              metric,
+              HealthMgrConstants.DEFAULT_METRIC_DURATION,
+              HealthMgrConstants.COMPONENT_STMGR);
   }
 }
