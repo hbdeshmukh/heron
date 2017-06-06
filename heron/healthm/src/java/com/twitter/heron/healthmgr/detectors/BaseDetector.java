@@ -20,6 +20,8 @@ import com.twitter.heron.healthmgr.common.HealthMgrConstants;
 
 public abstract class BaseDetector implements IDetector {
   protected static final String BACK_PRESSURE = HealthMgrConstants.METRIC_INSTANCE_BACK_PRESSURE;
+  protected static final String GROWING_BUFFER = "GROWING_BUFFER";
+  protected static final String BUFFER_GROWTH_RATE = "BUFFER_GROWTH_RATE";
 
   @Override
   public void close() {
