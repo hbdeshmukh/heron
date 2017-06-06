@@ -22,6 +22,8 @@ public interface HealthMgrConstants {
   String METRIC_BUFFER_SIZE = "__connection_buffer_by_instanceid/";
   String METRIC_BUFFER_SIZE_SUFFIX = "/packets";
 
+  String SYMPTOM_GROWING_BUFFER = "GROWING_BUFFER";
+
   String COMPONENT_STMGR = "__stmgr__";
 
   String CONF_TRACKER_URL = "TRACKER_URL";

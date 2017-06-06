@@ -35,6 +35,7 @@ import com.twitter.heron.healthmgr.HealthPolicyConfig;
 import com.twitter.heron.healthmgr.common.HealthManagerEvents.TopologyUpdate;
 import com.twitter.heron.healthmgr.common.HealthMgrConstants;
 import com.twitter.heron.healthmgr.detectors.BackPressureDetector;
+import com.twitter.heron.healthmgr.detectors.BufferGrowthDetector;
 import com.twitter.heron.healthmgr.diagnosers.DataSkewDiagnoser;
 import com.twitter.heron.healthmgr.diagnosers.SlowInstanceDiagnoser;
 import com.twitter.heron.healthmgr.diagnosers.UnderProvisioningDiagnoser;
@@ -51,6 +52,7 @@ public class DynamicResourceAllocationPolicy
 
   private HealthPolicyConfig policyConfig;
   private BackPressureDetector backPressureDetector;
+  private BufferGrowthDetector bufferGrowthDetector;
   private UnderProvisioningDiagnoser underProvisioningDiagnoser;
   private DataSkewDiagnoser dataSkewDiagnoser;
   private SlowInstanceDiagnoser slowInstanceDiagnoser;
@@ -64,6 +66,7 @@ public class DynamicResourceAllocationPolicy
   DynamicResourceAllocationPolicy(HealthPolicyConfig policyConfig,
                                   EventManager eventManager,
                                   BackPressureDetector backPressureDetector,
+                                  BufferGrowthDetector bufferGrowthDetector,
                                   UnderProvisioningDiagnoser underProvisioningDiagnoser,
                                   DataSkewDiagnoser dataSkewDiagnoser,
                                   SlowInstanceDiagnoser slowInstanceDiagnoser,
@@ -71,6 +74,7 @@ public class DynamicResourceAllocationPolicy
     this.policyConfig = policyConfig;
 
     this.backPressureDetector = backPressureDetector;
+    this.bufferGrowthDetector = bufferGrowthDetector;
 
     this.underProvisioningDiagnoser = underProvisioningDiagnoser;
     this.dataSkewDiagnoser = dataSkewDiagnoser;
@@ -88,7 +92,13 @@ public class DynamicResourceAllocationPolicy
       LOG.info("Skip detector execution to let topology stabilize, wait=" + delay);
       return new ArrayList<>();
     }
-    return backPressureDetector.detect();
+    List<Symptom> bufferGrowthSymptoms = bufferGrowthDetector.detect();
+    List<Symptom> backPressureSymptoms = bufferGrowthDetector.detect();
+    assert backPressureSymptoms != null;
+    if (bufferGrowthSymptoms != null) {
+      backPressureSymptoms.addAll(bufferGrowthSymptoms);
+    }
+    return backPressureSymptoms;
   }
 
   private long getDelay() {

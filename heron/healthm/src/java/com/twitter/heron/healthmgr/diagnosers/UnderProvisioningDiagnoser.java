@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package com.twitter.heron.healthmgr.diagnosers;
 
 import java.util.List;
@@ -40,16 +39,30 @@ public class UnderProvisioningDiagnoser extends BaseDiagnoser {
 
   @Override
   public Diagnosis diagnose(List<Symptom> symptoms) {
-    List<Symptom> bpSymptoms = getBackPressureSymptoms(symptoms);
-    if (bpSymptoms.isEmpty()) {
-      // Since there is no back pressure, no action is needed
-      return null;
-    } else if (bpSymptoms.size() > 1) {
-      // TODO handle cases where multiple detectors create back pressure symptom
+    List<Symptom> backPressureSymptoms = findSymptomsByName(symptoms, BACK_PRESSURE);
+    List<Symptom> bufferGrowthSymptoms = findSymptomsByName(symptoms, GROWING_BUFFER);
+    if (backPressureSymptoms.isEmpty()) {
+      return bufferGrowthDiagnosisHelper(bufferGrowthSymptoms);
+    } else if (backPressureSymptoms.size() == 1) {
+      return backPressureDiagnosisHelper(backPressureSymptoms);
+    } else {
+      // TODO handle cases where multiple detectors create back pressure symptom.
       throw new IllegalStateException("Multiple back-pressure symptoms case");
     }
+  }
 
-    Symptom backPressureSymptom = bpSymptoms.iterator().next();
+  private Diagnosis bufferGrowthDiagnosisHelper(List<Symptom> bufferGrowthSymptoms) {
+    if (bufferGrowthSymptoms != null) {
+      if (!bufferGrowthSymptoms.isEmpty()) {
+        // NOTE - We assume that there's only one symptom in the list.
+        return new Diagnosis(this.getClass().getSimpleName(), bufferGrowthSymptoms.get(0));
+      }
+    }
+    return null;
+  }
+
+  private Diagnosis backPressureDiagnosisHelper(List<Symptom> backPressureSymptoms) {
+    Symptom backPressureSymptom = backPressureSymptoms.iterator().next();
 
     ComponentMetrics bpMetricsData = backPressureSymptom.getComponent();
     Map<String, ComponentMetrics> result = bufferSizeSensor.get(bpMetricsData.getName());
@@ -62,15 +75,15 @@ public class UnderProvisioningDiagnoser extends BaseDiagnoser {
     Symptom resultSymptom = null;
     // if all instances are reporting backpressure or if all instances have large pending buffers
     if (compStats.bufferSizeMin > limit
-        && compStats.bufferSizeMin * 5 > compStats.bufferSizeMax) {
+            && compStats.bufferSizeMin * 5 > compStats.bufferSizeMax) {
       LOG.info(String.format("UNDER_PROVISIONING: %s back-pressure(%s) and min buffer size: %s",
-          mergedData.getName(), compStats.totalBackpressure, compStats.bufferSizeMin));
+              mergedData.getName(), compStats.totalBackpressure, compStats.bufferSizeMin));
       resultSymptom = backPressureSymptom;
       // TODO add other symptoms applicable to this diagnosis
     }
 
     return resultSymptom != null ?
-        new Diagnosis(this.getClass().getSimpleName(), resultSymptom)
-        : null;
+            new Diagnosis(this.getClass().getSimpleName(), resultSymptom)
+            : null;
   }
 }

@@ -28,15 +28,21 @@ public abstract class BaseDiagnoser implements IDiagnoser {
   protected static final String EXE_COUNT = HealthMgrConstants.METRIC_EXE_COUNT;
   protected static final String BUFFER_SIZE = HealthMgrConstants.METRIC_BUFFER_SIZE;
   protected static final String BACK_PRESSURE = HealthMgrConstants.METRIC_INSTANCE_BACK_PRESSURE;
+  protected static final String GROWING_BUFFER = HealthMgrConstants.SYMPTOM_GROWING_BUFFER;
 
   @Override
   public void close() {
   }
 
+  // TODO(harshad) - Replace this method by findSymptomsByName.
   protected List<Symptom> getBackPressureSymptoms(List<Symptom> symptoms) {
+    return findSymptomsByName(symptoms, BACK_PRESSURE);
+  }
+
+  protected List<Symptom> findSymptomsByName(List<Symptom> symptoms, String symptomName) {
     List<Symptom> result = new ArrayList<>();
     for (Symptom symptom : symptoms) {
-      if (symptom.getName().equals(BACK_PRESSURE)) {
+      if (symptom.getName().equals(symptomName)) {
         result.add(symptom);
       }
     }

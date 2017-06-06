@@ -12,20 +12,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 public class BufferGrowthDetector extends BaseDetector {
   private BufferTrendLineSensor bufferTrendLineSensor;
   private long numSecondsBetweenObservations = 60;
   private Double bufferGrowthRateThreshold = 0.0;
 
   @Inject
-  public void initialize(BufferTrendLineSensor bufferTrendLineSensor) {
+  public BufferGrowthDetector(BufferTrendLineSensor bufferTrendLineSensor) {
     this.bufferTrendLineSensor = bufferTrendLineSensor;
   }
 
   @Override
   public List<Symptom> detect() {
     Map<String, ComponentMetrics> bufferTrendLineMetrics = bufferTrendLineSensor.get();
-    List<Symptom> symptoms = new ArrayList<>();
+    Symptom symptom = new Symptom(GROWING_BUFFER);
     for (String componentName : bufferTrendLineMetrics.keySet()) {
       HashMap<String, InstanceMetrics> metrics
               = bufferTrendLineMetrics.get(componentName).getMetrics();
@@ -40,10 +41,16 @@ public class BufferGrowthDetector extends BaseDetector {
       }
       if (currComponentMetrics.anyInstanceAboveLimit(
               BUFFER_GROWTH_RATE, bufferGrowthRateThreshold)) {
-        symptoms.add(new Symptom(GROWING_BUFFER, currComponentMetrics));
+        symptom.addComponentMetrics(currComponentMetrics);
       }
     }
-    return symptoms;
+
+    if (symptom.getComponents().size() > 0) {
+      List<Symptom> symptoms = new ArrayList<>();
+      symptoms.add(symptom);
+    }
+
+    return null;
   }
 
   private Double getIncreaseRate(List<Double> data) {
