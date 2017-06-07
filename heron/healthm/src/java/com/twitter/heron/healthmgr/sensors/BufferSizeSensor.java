@@ -71,6 +71,8 @@ public class BufferSizeSensor extends BaseSensor {
 
         Map<String, ComponentMetrics> stmgrResult = getInstanceMetrics(metric);
 
+        System.out.println(stmgrResult);
+
         HashMap<String, InstanceMetrics> streamManagerResult =
             stmgrResult.get(HealthMgrConstants.COMPONENT_STMGR).getMetrics();
 

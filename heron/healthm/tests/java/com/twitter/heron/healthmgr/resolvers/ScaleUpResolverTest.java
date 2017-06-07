@@ -14,20 +14,12 @@
 
 package com.twitter.heron.healthmgr.resolvers;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.microsoft.dhalion.core.EventManager;
 import com.microsoft.dhalion.detector.Symptom;
 import com.microsoft.dhalion.diagnoser.Diagnosis;
 import com.microsoft.dhalion.metrics.ComponentMetrics;
 import com.microsoft.dhalion.metrics.InstanceMetrics;
 import com.microsoft.dhalion.resolver.Action;
-
-import org.junit.Test;
-
 import com.twitter.heron.api.generated.TopologyAPI;
 import com.twitter.heron.healthmgr.common.HealthMgrConstants;
 import com.twitter.heron.healthmgr.common.PackingPlanProvider;
@@ -40,6 +32,12 @@ import com.twitter.heron.spi.common.Key;
 import com.twitter.heron.spi.packing.IRepacking;
 import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.utils.TopologyTests;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
@@ -66,10 +64,10 @@ public class ScaleUpResolverTest {
     diagnosis.add(new Diagnosis("test", symptom));
 
     ScaleUpResolver resolver
-        = new ScaleUpResolver(null, packingPlanProvider, scheduler, eventManager, null);
+        = new ScaleUpResolver(null, packingPlanProvider, scheduler,  eventManager, null, null, config);
     ScaleUpResolver spyResolver = spy(resolver);
 
-    doReturn(2).when(spyResolver).computeScaleUpFactor(metrics);
+    //doReturn(2).when(spyResolver).computeScaleUpFactorForBackPressure(metrics);
     doReturn(currentPlan).when(spyResolver).buildNewPackingPlan(any(HashMap.class), eq(currentPlan));
 
     List<Action> result = spyResolver.resolve(diagnosis);
@@ -94,7 +92,7 @@ public class ScaleUpResolverTest {
     when(repacking.repack(currentPlan, deltaChange)).thenReturn(currentPlan);
 
     ScaleUpResolver resolver =
-        new ScaleUpResolver(topologyProvider, null, null, eventManager, config);
+        new ScaleUpResolver(topologyProvider, null, null, eventManager, null, null, config);
     ScaleUpResolver spyResolver = spy(resolver);
     doReturn(repacking).when(spyResolver).getRepackingClass("Repacking");
 
@@ -139,14 +137,14 @@ public class ScaleUpResolverTest {
     metrics.addInstanceMetric(new InstanceMetrics("i1", BACK_PRESSURE, 500));
     metrics.addInstanceMetric(new InstanceMetrics("i2", BACK_PRESSURE, 0));
 
-    int result = resolver.computeScaleUpFactor(metrics);
+    int result = resolver.computeScaleUpFactorForBackPressure(metrics);
     assertEquals(4, result);
 
     metrics = new ComponentMetrics("bolt");
     metrics.addInstanceMetric(new InstanceMetrics("i1", BACK_PRESSURE, 750));
     metrics.addInstanceMetric(new InstanceMetrics("i2", BACK_PRESSURE, 0));
 
-    result = resolver.computeScaleUpFactor(metrics);
+    result = resolver.computeScaleUpFactorForBackPressure(metrics);
     assertEquals(8, result);
 
     metrics = new ComponentMetrics("bolt");
@@ -154,7 +152,7 @@ public class ScaleUpResolverTest {
     metrics.addInstanceMetric(new InstanceMetrics("i2", BACK_PRESSURE, 100));
     metrics.addInstanceMetric(new InstanceMetrics("i3", BACK_PRESSURE, 0));
 
-    result = resolver.computeScaleUpFactor(metrics);
+    result = resolver.computeScaleUpFactorForBackPressure(metrics);
     assertEquals(6, result);
   }
 }

@@ -57,7 +57,7 @@ public class TrackerMetricsProvider implements MetricsProvider {
         .queryParam("topology", topologyName);
 
     this.baseTargetTimeline = client.target(trackerURL)
-            .path("topologis/metricstimeline")
+            .path("topologies/metricstimeline")
             .queryParam("cluster", cluster)
             .queryParam("environ", environ)
             .queryParam("topology", topologyName);
@@ -82,6 +82,7 @@ public class TrackerMetricsProvider implements MetricsProvider {
                                                            int startTimeSec,
                                                            int durationSec,
                                                            String... components) {
+    LOG.info("Calling TrackerMetricsProvider::getComponentMetrics");
     Map<String, ComponentMetrics> result = new HashMap<>();
     for (String component : components) {
       String response = getMetricsFromTrackerForTimeline(metric, component, startTimeSec, durationSec);
@@ -93,8 +94,9 @@ public class TrackerMetricsProvider implements MetricsProvider {
           LOG.info("The response doesn't have the necessary fields");
           return result;
         }
-
+        LOG.info(rootNode.toString());
         ComponentMetrics componentMetrics = reorderJson(rootNode, metric, component);
+        LOG.info(componentMetrics.toString());
         if (componentMetrics != null) {
           result.put(component, componentMetrics);
         }
@@ -102,7 +104,6 @@ public class TrackerMetricsProvider implements MetricsProvider {
         e.printStackTrace();
       }
     }
-
     return result;
   }
 
@@ -175,7 +176,7 @@ public class TrackerMetricsProvider implements MetricsProvider {
             .queryParam("component", component)
             .queryParam("starttime", startTime)
             .queryParam("endtime", startTime + durationSec);
-
+    LOG.info(target.toString());
     LOG.fine("Tracker Query URI: " + target.getUri());
 
     Response r = target.request(MediaType.APPLICATION_JSON_TYPE).get();
@@ -198,7 +199,7 @@ public class TrackerMetricsProvider implements MetricsProvider {
     Iterator<String> iter = metricNode.fieldNames();
     while (iter.hasNext()) {
       String fieldName = iter.next();
-      if (fieldName.startsWith(component)) {
+      if (fieldName.startsWith("stmgr")) {
         JsonNode node = metricNode.get(fieldName);
         // We need to sort the metrics using the timestamps as the key.
         Iterator<Map.Entry<String, JsonNode>> metrics = node.fields();

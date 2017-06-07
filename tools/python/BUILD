@@ -5,7 +5,7 @@ package(default_visibility = ["//visibility:public"])
 action_listener(
     name = "compile_python",
     mnemonics = ["PexPython"],
-    extra_actions = [":checkstyle_python"],
+    extra_actions = [],
 )
 
 extra_action(

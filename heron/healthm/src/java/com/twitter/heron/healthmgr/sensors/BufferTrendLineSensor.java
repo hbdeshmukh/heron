@@ -19,6 +19,7 @@ public class BufferTrendLineSensor extends BufferSizeSensor {
 
   @Override
   protected Map<String, ComponentMetrics> getInstanceMetrics(String metric) {
+    System.out.println("Calling getInstanceMetrics for BufferTrendLineSensor");
     Map<String, ComponentMetrics> stmgrResult = metricsProvider.getComponentMetrics(
             metric,
             (int)(System.currentTimeMillis()/1000 - HealthMgrConstants.DEFAULT_METRIC_DURATION),

@@ -23,6 +23,7 @@ public interface HealthMgrConstants {
   String METRIC_BUFFER_SIZE_SUFFIX = "/packets";
 
   String SYMPTOM_GROWING_BUFFER = "GROWING_BUFFER";
+  String BUFFER_GROWTH_RATE = "BUFFER_GROWTH_RATE";
 
   String COMPONENT_STMGR = "__stmgr__";
 
