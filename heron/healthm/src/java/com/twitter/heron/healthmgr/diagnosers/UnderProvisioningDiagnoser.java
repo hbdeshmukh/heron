@@ -41,7 +41,7 @@ public class UnderProvisioningDiagnoser extends BaseDiagnoser {
   public Diagnosis diagnose(List<Symptom> symptoms) {
     List<Symptom> backPressureSymptoms = findSymptomsByName(symptoms, BACK_PRESSURE);
     List<Symptom> bufferGrowthSymptoms = findSymptomsByName(symptoms, GROWING_BUFFER);
-    if (backPressureSymptoms.isEmpty()) {
+    if (backPressureSymptoms == null || backPressureSymptoms.isEmpty()) {
       return bufferGrowthDiagnosisHelper(bufferGrowthSymptoms);
     } else if (backPressureSymptoms.size() == 1) {
       return backPressureDiagnosisHelper(backPressureSymptoms);

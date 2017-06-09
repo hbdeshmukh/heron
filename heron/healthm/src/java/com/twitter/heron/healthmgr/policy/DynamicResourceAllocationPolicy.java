@@ -93,7 +93,7 @@ public class DynamicResourceAllocationPolicy
       return new ArrayList<>();
     }
     List<Symptom> bufferGrowthSymptoms = bufferGrowthDetector.detect();
-    List<Symptom> backPressureSymptoms = bufferGrowthDetector.detect();
+    List<Symptom> backPressureSymptoms = backPressureDetector.detect();
     assert backPressureSymptoms != null;
     if (bufferGrowthSymptoms != null) {
       backPressureSymptoms.addAll(bufferGrowthSymptoms);
