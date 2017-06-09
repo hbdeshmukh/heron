@@ -95,7 +95,9 @@ public class TrackerMetricsProvider implements MetricsProvider {
           return result;
         }
         LOG.info(rootNode.toString());
-        ComponentMetrics componentMetrics = reorderJson(rootNode, metric, component);
+        // We need to reorder the json as the metrics received by the json are not
+        // chronologically sorted. 
+        ComponentMetrics componentMetrics = sortJsonByTimestamp(rootNode, metric, component);
         LOG.info(componentMetrics.toString());
         if (componentMetrics != null) {
           result.put(component, componentMetrics);
@@ -193,12 +195,13 @@ public class TrackerMetricsProvider implements MetricsProvider {
     return parseCondition;
   }
 
-  private ComponentMetrics reorderJson(JsonNode rootNode, String metric, String component) {
+  private ComponentMetrics sortJsonByTimestamp(JsonNode rootNode, String metric, String component) {
     // NOTE - In this class the metric name includes instance name as well.
     JsonNode metricNode = rootNode.get("result").get("timeline").get(metric);
     Iterator<String> iter = metricNode.fieldNames();
     while (iter.hasNext()) {
       String fieldName = iter.next();
+      // TODO(harshad) - Remove the hard coded string stmgr.
       if (fieldName.startsWith("stmgr")) {
         JsonNode node = metricNode.get(fieldName);
         // We need to sort the metrics using the timestamps as the key.
