@@ -38,14 +38,11 @@ public class BufferGrowthDetector extends BaseDetector {
     for (String componentName : bufferTrendLineMetrics.keySet()) {
       HashMap<String, InstanceMetrics> metrics
               = bufferTrendLineMetrics.get(componentName).getMetrics();
-      System.out.println("Printing metrics");
-      System.out.println(metrics.toString());
       ComponentMetrics currComponentMetrics = new ComponentMetrics(componentName);
       for (String instanceName : metrics.keySet()) {
         List<Double> bufferSizes = new ArrayList<>();
-        for (String metricAsStr : metrics.get(instanceName).getMetrics()) {
+        for (String metricAsStr : metrics.get(instanceName).getMetricNames()) {
           for (Double d : metrics.get(instanceName).getMetricValues(metricAsStr).values()) {
-            System.out.println("Value: " + d);
             bufferSizes.add(d);
           }
         }

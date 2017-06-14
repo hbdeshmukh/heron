@@ -45,6 +45,8 @@ healthmgr_deps_files = [
     "@com_microsoft_dhalion//jar",
     "@aopalliance_aopalliance//jar",
     "@org_apache_commons_commons_math3//jar",
+    "@com_jayway_jsonpath//jar",
+    "@net_minidev_json_smart//jar"
 ]
 
 java_library(

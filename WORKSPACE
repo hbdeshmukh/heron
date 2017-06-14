@@ -426,3 +426,8 @@ maven_jar(
   name = "org_apache_commons_commons_math3",
   artifact = "org.apache.commons:commons-math3:3.6.1"
 )
+
+maven_jar(
+  name = "com_jayway_jsonpath",
+  artifact = "com.jayway.jsonpath:json-path:2.1.0",
+)
