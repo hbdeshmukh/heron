@@ -431,3 +431,13 @@ maven_jar(
   name = "com_jayway_jsonpath",
   artifact = "com.jayway.jsonpath:json-path:2.1.0",
 )
+
+maven_jar(
+  name = "nz_ac_waikato_cms_weka_weka_dev",
+  artifact = "nz.ac.waikato.cms.weka:weka-dev:3.7.5",
+)
+
+maven_jar(
+  name = "net_minidev_json_smart",
+  artifact = "net.minidev:json-smart:2.2",
+)

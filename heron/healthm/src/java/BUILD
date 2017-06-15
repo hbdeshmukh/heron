@@ -26,6 +26,8 @@ healthmgr_deps_files = [
     "@com_fasterxml_jackson_jaxrs_jackson_jaxrs_json_provider//jar",
     "@com_fasterxml_jackson_jaxrs_jackson_jaxrs_base//jar",
     "@com_fasterxml_jackson_module_jackson_module_jaxb_annotations//jar",
+    "@com_jayway_jsonpath//jar",
+    "@net_minidev_json_smart//jar",
     "@javax_ws_rs_javax_ws_rs_api//jar",
     "@javax_annotation_javax_annotation_api//jar",
     "@javax_inject_javax_inject//jar",
@@ -45,8 +47,6 @@ healthmgr_deps_files = [
     "@com_microsoft_dhalion//jar",
     "@aopalliance_aopalliance//jar",
     "@org_apache_commons_commons_math3//jar",
-    "@com_jayway_jsonpath//jar",
-    "@net_minidev_json_smart//jar"
 ]
 
 java_library(

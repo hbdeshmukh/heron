@@ -55,14 +55,16 @@ public class MetricsCollectorPolicy extends HealthPolicyImpl {
     mergeMetricsHelper(mergedMetrics, bufferSizes);
 
     if (growthRateSymptoms != null) {
+      LOG.info("Growth rate symptoms is non null");
       for (Symptom growthRateSymptom : growthRateSymptoms) {
         if (growthRateSymptom != null) {
           final Map<String, ComponentMetrics> components = growthRateSymptom.getComponents();
-          mergeMetricsHelper(components, mergedMetrics);
+          mergeMetricsHelper(mergedMetrics, components);
         }
       }
     }
     addLables(mergedMetrics);
+    LOG.info(mergedMetrics.toString());
     serializeToJson(mergedMetrics);
     return null;
   }
@@ -71,7 +73,10 @@ public class MetricsCollectorPolicy extends HealthPolicyImpl {
                                   final Map<String, ComponentMetrics> sourceMetrics) {
     for (String srcComponentName : sourceMetrics.keySet()) {
       if (destinationMetrics.containsKey(srcComponentName)) {
-        ComponentMetrics.merge(destinationMetrics.get(srcComponentName), sourceMetrics.get(srcComponentName));
+        ComponentMetrics mergedComponentMetrics =
+                ComponentMetrics.merge(destinationMetrics.get(srcComponentName),
+                                       sourceMetrics.get(srcComponentName));
+        destinationMetrics.put(srcComponentName, mergedComponentMetrics);
       } else {
         // destinationMetrics doesn't have an entry for component with name srcComponentName.
         destinationMetrics.put(srcComponentName, sourceMetrics.get(srcComponentName));

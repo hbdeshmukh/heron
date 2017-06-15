@@ -3,6 +3,7 @@ package com.twitter.heron.healthmgr.classifier;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ComponentFeatureVector {
   // Key = metric name (e.g. "__execute-count/default")
@@ -19,6 +20,16 @@ public class ComponentFeatureVector {
 
   public String getComponentName() {
     return componentName;
+  }
+
+  public Set<String> getFeatureNames() {
+    return featureVector.keySet();
+  }
+
+  public int getNumInstances() {
+    // Assumption - all the metrics collect the same number of instances.
+    final String firstKey =  featureVector.keySet().iterator().next();
+    return featureVector.get(firstKey).size();
   }
 
   public ComponentFeatureVector(String componentName) {
